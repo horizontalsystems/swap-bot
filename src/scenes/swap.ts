@@ -50,6 +50,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     ctx.scene.session.amount = undefined
     ctx.scene.session.destinationAddress = undefined
     ctx.scene.session.refundAddress = undefined
+    ctx.scene.session.routes = undefined
     ctx.scene.session.quote = undefined
 
     const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
@@ -131,7 +132,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     return ctx.wizard.next()
   },
 
-  // Step 5: Handle refund address, fetch dry quote, show summary
+  // Step 5: Handle refund address, fetch dry quotes, show route options
   async ctx => {
     if (!ctx.has(message('text'))) {
       await ctx.reply('⚠️ Please enter a valid wallet address.')
@@ -159,7 +160,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
       return
     }
 
-    const loadingMsg = await ctx.reply('⏳ Fetching quote...')
+    const loadingMsg = await ctx.reply('⏳ Fetching quotes...')
 
     try {
       const quoteResponse = await fetchQuote({
@@ -178,8 +179,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
         return
       }
 
-      const route = quoteResponse.routes[0]
-      ctx.scene.session.quote = route
+      ctx.scene.session.routes = quoteResponse.routes
 
       try {
         await ctx.deleteMessage(loadingMsg.message_id)
@@ -187,24 +187,27 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
         // Ignore
       }
 
-      const estimatedTime = formatTime(route.estimatedTime.total)
-      const fees = formatFees(route.fees)
-      const providerList = route.providers.join(', ')
+      const routeLines = quoteResponse.routes.map((route, i) => {
+        const provider = route.providers.join(', ')
+        const time = formatTime(route.estimatedTime.total)
+        return `*${i + 1}.* *${provider}*\n   Receive: ~${route.expectedBuyAmount} ${assetOut!.name} (min ${route.expectedBuyAmountMaxSlippage})\n   Time: ~${time}`
+      })
+
+      const routeButtons = quoteResponse.routes.map((route, i) =>
+        Markup.button.callback(`${i + 1}. ${route.providers.join(', ')}`, `route_${i}`)
+      )
+
+      const buttonRows = routeButtons.map(b => [b])
+      buttonRows.push(cancelButtonRow)
 
       await ctx.reply(
-        `📋 *Swap Summary*\n\n` +
-          `*Send:* ${amount} ${assetIn!.name}\n` +
-          `*Receive:* ~${route.expectedBuyAmount} ${assetOut!.name}\n` +
-          `*Min receive:* ${route.expectedBuyAmountMaxSlippage} ${assetOut!.name}\n\n` +
-          `*Destination:*\n\`${destinationAddress}\`\n` +
-          `*Refund address:*\n\`${refundAddress}\`\n\n` +
-          `*Provider:* ${providerList}\n` +
-          `*Estimated time:* ${estimatedTime}\n` +
-          `*Fees:*\n${fees}\n\n` +
-          `Confirm this swap?`,
+        `📊 *Available Quotes*\n\n` +
+          `*${amount} ${assetIn!.name}* → *${assetOut!.name}*\n\n` +
+          routeLines.join('\n\n') +
+          `\n\nSelect a provider:`,
         {
           parse_mode: 'Markdown',
-          ...Markup.inlineKeyboard([[Markup.button.callback('✅ Confirm', 'confirm_swap')], cancelButtonRow])
+          ...Markup.inlineKeyboard(buttonRows)
         }
       )
 
@@ -217,9 +220,18 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     }
   },
 
-  // Step 6: Waiting for confirm/cancel
+  // Step 6: Waiting for route selection
   async ctx => {
-    await ctx.reply('⚠️ Please use the buttons to confirm or cancel.')
+    if ('message' in (ctx.update as any)) {
+      await ctx.reply('⚠️ Please select a provider from the buttons above.')
+    }
+  },
+
+  // Step 7: Waiting for confirm/cancel
+  async ctx => {
+    if ('message' in (ctx.update as any)) {
+      await ctx.reply('⚠️ Please use the buttons to confirm or cancel.')
+    }
   }
 )
 
@@ -283,11 +295,49 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
   }
 })
 
-// Confirm swap — call API with dry: false
-swapWizard.action('confirm_swap', async ctx => {
-  const { assetIn, assetOut, amount, destinationAddress, refundAddress } = ctx.scene.session
+// Route selection
+swapWizard.action(/^route_(\d+)$/, async ctx => {
+  const index = parseInt(ctx.match[1], 10)
+  const { routes, assetIn, assetOut, amount, destinationAddress, refundAddress } = ctx.scene.session
 
-  if (!assetIn || !assetOut || !amount || !destinationAddress || !refundAddress) {
+  if (!routes || !routes[index] || !assetIn || !assetOut || !amount || !destinationAddress || !refundAddress) {
+    await ctx.answerCbQuery('Session expired. Please start again with /swap.')
+    return ctx.scene.leave()
+  }
+
+  const route = routes[index]
+  ctx.scene.session.quote = route
+
+  await ctx.answerCbQuery(`Selected ${route.providers.join(', ')}`)
+
+  const estimatedTime = formatTime(route.estimatedTime.total)
+  const fees = formatFees(route.fees)
+
+  await ctx.editMessageText(
+    `📋 *Swap Summary*\n\n` +
+      `*Send:* ${amount} ${assetIn.name}\n` +
+      `*Receive:* ~${route.expectedBuyAmount} ${assetOut.name}\n` +
+      `*Min receive:* ${route.expectedBuyAmountMaxSlippage} ${assetOut.name}\n\n` +
+      `*Destination:*\n\`${destinationAddress}\`\n` +
+      `*Refund address:*\n\`${refundAddress}\`\n\n` +
+      `*Provider:* ${route.providers.join(', ')}\n` +
+      `*Estimated time:* ${estimatedTime}\n` +
+      `*Fees:*\n${fees}\n\n` +
+      `Confirm this swap?`,
+    {
+      parse_mode: 'Markdown',
+      ...Markup.inlineKeyboard([[Markup.button.callback('✅ Confirm', 'confirm_swap')], cancelButtonRow])
+    }
+  )
+
+  return ctx.wizard.next()
+})
+
+// Confirm swap — call API with dry: false using the selected route's providers
+swapWizard.action('confirm_swap', async ctx => {
+  const { assetIn, assetOut, amount, destinationAddress, refundAddress, quote } = ctx.scene.session
+
+  if (!assetIn || !assetOut || !amount || !destinationAddress || !refundAddress || !quote) {
     await ctx.answerCbQuery('Session expired. Please start again with /swap.')
     return ctx.scene.leave()
   }
@@ -296,15 +346,13 @@ swapWizard.action('confirm_swap', async ctx => {
   await ctx.editMessageText('⏳ Confirming swap...')
 
   try {
-    const providers = getProvidersForPair(assetIn.identifier, assetOut.identifier)
-
     const quoteResponse = await fetchQuote({
       sellAsset: assetIn.identifier,
       buyAsset: assetOut.identifier,
       sellAmount: amount.toString(),
       destinationAddress,
       refundAddress,
-      providers,
+      providers: quote.providers,
       dry: false
     })
 

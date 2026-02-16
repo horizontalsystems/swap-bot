@@ -60,6 +60,7 @@ export interface SwapSessionData extends Scenes.WizardSessionData {
   amount?: number
   destinationAddress?: string
   refundAddress?: string
+  routes?: QuoteRoute[]
   quote?: QuoteRoute
 }
 
