@@ -9,10 +9,29 @@ const CANCEL_TEXT = '\n\nType /cancel to cancel the swap at any time.'
 
 const cancelButtonRow = [Markup.button.callback('❌ Cancel Swap', 'cancel_swap')]
 
+function assetCaption(asset: Asset) {
+  const map: Record<string, string> = {
+    ETH: 'ERC20',
+    TRON: 'TRC20',
+    SOL: 'SPL'
+  }
+
+  const [chain, token] = asset.identifier.split('.')
+  const [ticker, ref] = token.split('-')
+
+  let caption = ticker
+
+  if (ref && map[chain]) {
+    caption += ` (${map[chain]})`
+  }
+
+  return caption
+}
+
 function assetKeyboard(assets: Asset[], excludeIdentifier?: string) {
   const filtered = excludeIdentifier ? assets.filter(a => a.identifier !== excludeIdentifier) : assets
 
-  const buttons = filtered.map(a => Markup.button.callback(a.identifier, `select_${a.identifier}`))
+  const buttons = filtered.map(a => Markup.button.callback(assetCaption(a), `select_${a.identifier}`))
 
   const rows: ReturnType<typeof Markup.button.callback>[][] = []
   for (let i = 0; i < buttons.length; i += 2) {
