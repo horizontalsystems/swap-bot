@@ -4,6 +4,7 @@ import { FEATURED_IDENTIFIERS } from '../config/assets'
 import { getAssetByIdentifier, getAssets, getProvidersForPair } from '../db/database'
 import { Asset, SwapContext, SwapSessionData } from '../types/context'
 import { fetchQuote } from '../utils/api'
+import { validateAddress } from '../utils/addressValidator'
 
 const cancelButtonRow = [Markup.button.callback('❌ Cancel Swap', 'cancel_swap')]
 
@@ -179,11 +180,12 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
     const address = ctx.message.text.trim()
 
-    if (address.length < 10) {
+    const addressError = validateAddress(ctx.scene.session.assetOut!.identifier, address)
+    if (addressError) {
       const progress = buildProgress(ctx.scene.session)
       await editSwapMessage(
         ctx,
-        `🔄 *Swap*\n\n${progress}\n\n⚠️ That doesn't look like a valid address.\n\n📍 Enter your *${assetCaption(ctx.scene.session.assetOut!)}* destination address:`,
+        `🔄 *Swap*\n\n${progress}\n\n⚠️ Invalid address. ${addressError}\n\n📍 Enter your *${assetCaption(ctx.scene.session.assetOut!)}* destination address:`,
         { ...Markup.inlineKeyboard([cancelButtonRow]) }
       )
       return
@@ -209,11 +211,12 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
     const refundAddress = ctx.message.text.trim()
 
-    if (refundAddress.length < 10) {
+    const refundError = validateAddress(ctx.scene.session.assetIn!.identifier, refundAddress)
+    if (refundError) {
       const progress = buildProgress(ctx.scene.session)
       await editSwapMessage(
         ctx,
-        `🔄 *Swap*\n\n${progress}\n\n⚠️ That doesn't look like a valid address.\n\n🔙 Enter your *${assetCaption(ctx.scene.session.assetIn!)}* refund address:`,
+        `🔄 *Swap*\n\n${progress}\n\n⚠️ Invalid address. ${refundError}\n\n🔙 Enter your *${assetCaption(ctx.scene.session.assetIn!)}* refund address:`,
         { ...Markup.inlineKeyboard([cancelButtonRow]) }
       )
       return
@@ -227,10 +230,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     const providers = getProvidersForPair(assetIn!.identifier, assetOut!.identifier)
 
     if (providers.length === 0) {
-      await editSwapMessage(
-        ctx,
-        `🔄 *Swap*\n\n${progress}\n\n❌ No providers support this pair.`
-      )
+      await editSwapMessage(ctx, `🔄 *Swap*\n\n${progress}\n\n❌ No providers support this pair.`)
       await sendWelcome(ctx)
       return ctx.scene.leave()
     }
@@ -248,10 +248,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
       })
 
       if (!quoteResponse.routes || quoteResponse.routes.length === 0) {
-        await editSwapMessage(
-          ctx,
-          `🔄 *Swap*\n\n${progress}\n\n❌ No swap routes available for this pair.`
-        )
+        await editSwapMessage(ctx, `🔄 *Swap*\n\n${progress}\n\n❌ No swap routes available for this pair.`)
         await sendWelcome(ctx)
         return ctx.scene.leave()
       }
@@ -281,10 +278,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Unknown error'
       console.error('[Swap] Quote error:', error)
-      await editSwapMessage(
-        ctx,
-        `🔄 *Swap*\n\n${progress}\n\n❌ Failed to fetch quote: ${errMsg}`
-      )
+      await editSwapMessage(ctx, `🔄 *Swap*\n\n${progress}\n\n❌ Failed to fetch quote: ${errMsg}`)
       await sendWelcome(ctx)
       return ctx.scene.leave()
     }
@@ -328,10 +322,10 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
     const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
 
     const progress = buildProgress(ctx.scene.session)
-    await ctx.editMessageText(
-      `🔄 *Swap*\n\n${progress}\n\nSelect the asset you want to *receive*:`,
-      { parse_mode: 'Markdown', ...assetKeyboard(featuredAssets, asset.identifier) }
-    )
+    await ctx.editMessageText(`🔄 *Swap*\n\n${progress}\n\nSelect the asset you want to *receive*:`, {
+      parse_mode: 'Markdown',
+      ...assetKeyboard(featuredAssets, asset.identifier)
+    })
 
     return ctx.wizard.next()
   }
