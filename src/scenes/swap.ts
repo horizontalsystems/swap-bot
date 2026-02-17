@@ -79,6 +79,16 @@ async function editSwapMessage(ctx: SwapContext, text: string, extra?: Record<st
   }
 }
 
+async function sendWelcome(ctx: SwapContext) {
+  await ctx.reply('👋 Welcome to *SwapBot*!\n\nSwap crypto assets quickly and easily.', {
+    parse_mode: 'Markdown',
+    ...Markup.inlineKeyboard([
+      [Markup.button.callback('🔄 New Swap', 'start_swap')],
+      [Markup.button.callback('❓ Help', 'show_help')]
+    ])
+  })
+}
+
 async function deleteUserMessage(ctx: SwapContext) {
   try {
     await ctx.deleteMessage()
@@ -107,6 +117,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
     if (featuredAssets.length === 0) {
       await ctx.reply('⚠️ No assets available yet. Token lists may still be loading. Please try again later.')
+      await sendWelcome(ctx)
       return ctx.scene.leave()
     }
 
@@ -218,8 +229,9 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     if (providers.length === 0) {
       await editSwapMessage(
         ctx,
-        `🔄 *Swap*\n\n${progress}\n\n❌ No providers support this pair.\nPlease start again with /swap.`
+        `🔄 *Swap*\n\n${progress}\n\n❌ No providers support this pair.`
       )
+      await sendWelcome(ctx)
       return ctx.scene.leave()
     }
 
@@ -238,8 +250,9 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
       if (!quoteResponse.routes || quoteResponse.routes.length === 0) {
         await editSwapMessage(
           ctx,
-          `🔄 *Swap*\n\n${progress}\n\n❌ No swap routes available for this pair.\nPlease start again with /swap.`
+          `🔄 *Swap*\n\n${progress}\n\n❌ No swap routes available for this pair.`
         )
+        await sendWelcome(ctx)
         return ctx.scene.leave()
       }
 
@@ -270,8 +283,9 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
       console.error('[Swap] Quote error:', error)
       await editSwapMessage(
         ctx,
-        `🔄 *Swap*\n\n${progress}\n\n❌ Failed to fetch quote: ${errMsg}\nPlease start again with /swap.`
+        `🔄 *Swap*\n\n${progress}\n\n❌ Failed to fetch quote: ${errMsg}`
       )
+      await sendWelcome(ctx)
       return ctx.scene.leave()
     }
   },
@@ -291,6 +305,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 swapWizard.command('cancel', async ctx => {
   await deleteUserMessage(ctx)
   await editSwapMessage(ctx, '❌ Swap cancelled.')
+  await sendWelcome(ctx)
   return ctx.scene.leave()
 })
 
@@ -349,7 +364,8 @@ swapWizard.action(/^route_(\d+)$/, async ctx => {
   const { routes, assetIn, assetOut, amount, destinationAddress, refundAddress } = ctx.scene.session
 
   if (!routes || !routes[index] || !assetIn || !assetOut || !amount || !destinationAddress || !refundAddress) {
-    await ctx.answerCbQuery('Session expired. Please start again with /swap.')
+    await ctx.answerCbQuery('Session expired.')
+    await sendWelcome(ctx)
     return ctx.scene.leave()
   }
 
@@ -386,7 +402,8 @@ swapWizard.action('confirm_swap', async ctx => {
   const { assetIn, assetOut, amount, destinationAddress, refundAddress, quote } = ctx.scene.session
 
   if (!assetIn || !assetOut || !amount || !destinationAddress || !refundAddress || !quote) {
-    await ctx.answerCbQuery('Session expired. Please start again with /swap.')
+    await ctx.answerCbQuery('Session expired.')
+    await sendWelcome(ctx)
     return ctx.scene.leave()
   }
 
@@ -405,7 +422,8 @@ swapWizard.action('confirm_swap', async ctx => {
     })
 
     if (!quoteResponse.routes || quoteResponse.routes.length === 0) {
-      await ctx.editMessageText('❌ Swap failed: no routes available. Please try again with /swap.')
+      await ctx.editMessageText('❌ Swap failed: no routes available.')
+      await sendWelcome(ctx)
       return ctx.scene.leave()
     }
 
@@ -413,6 +431,7 @@ swapWizard.action('confirm_swap', async ctx => {
 
     if (!route.qrCodeDataURL) {
       await ctx.editMessageText('❌ Swap confirmed but no QR code received. Please contact support.')
+      await sendWelcome(ctx)
       return ctx.scene.leave()
     }
 
@@ -442,11 +461,13 @@ swapWizard.action('confirm_swap', async ctx => {
       }
     )
 
+    await sendWelcome(ctx)
     return ctx.scene.leave()
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error'
     console.error('[Swap] Confirm error:', error)
-    await ctx.editMessageText(`❌ Swap confirmation failed: ${errMsg}\n\nPlease try again with /swap.`)
+    await ctx.editMessageText(`❌ Swap confirmation failed: ${errMsg}`)
+    await sendWelcome(ctx)
     return ctx.scene.leave()
   }
 })
@@ -460,6 +481,7 @@ swapWizard.action('disabled', async ctx => {
 swapWizard.action('cancel_swap', async ctx => {
   await ctx.answerCbQuery('Swap cancelled')
   await ctx.editMessageText('❌ Swap cancelled.')
+  await sendWelcome(ctx)
   return ctx.scene.leave()
 })
 

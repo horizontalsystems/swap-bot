@@ -1,4 +1,4 @@
-import { Scenes, session, Telegraf } from 'telegraf'
+import { Markup, Scenes, session, Telegraf } from 'telegraf'
 import dotenv from 'dotenv'
 import { SwapContext } from './types/context'
 import { swapWizard } from './scenes/swap'
@@ -28,9 +28,30 @@ bot.use(stage.middleware())
 
 // Commands
 bot.start(ctx => {
-  ctx.reply('👋 Welcome to *SwapBot*!\n\n' + 'Use /swap to start a new swap.\n' + 'Use /help for more info.', {
-    parse_mode: 'Markdown'
+  ctx.reply('👋 Welcome to *SwapBot*!\n\nSwap crypto assets quickly and easily.', {
+    parse_mode: 'Markdown',
+    ...Markup.inlineKeyboard([
+      [Markup.button.callback('🔄 New Swap', 'start_swap')],
+      [Markup.button.callback('❓ Help', 'show_help')]
+    ])
   })
+})
+
+bot.action('start_swap', async ctx => {
+  await ctx.answerCbQuery()
+  return ctx.scene.enter('swap-wizard')
+})
+
+bot.action('show_help', async ctx => {
+  await ctx.answerCbQuery()
+  await ctx.editMessageText(
+    '🤖 *SwapBot Help*\n\n' +
+      '/swap — Start a new token swap\n' +
+      '/cancel — Cancel the current swap\n' +
+      '/status — Show token sync status\n' +
+      '/help — Show this message',
+    { parse_mode: 'Markdown' }
+  )
 })
 
 bot.help(ctx => {
