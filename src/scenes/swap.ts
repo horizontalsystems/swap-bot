@@ -10,7 +10,17 @@ const cancelButtonRow = [Markup.button.callback('❌ Cancel Swap', 'cancel_swap'
 
 // --- Helpers ---
 
-function assetCaption(asset: Asset) {
+const providerTitles: Record<string, string> = {
+  THORCHAIN: 'THORChain',
+  MAYACHAIN: 'Maya Protocol',
+  NEAR: 'Near',
+  SWAPUZ: 'Swapuz',
+  STEALTHEX: 'StealthEX',
+  QUICKEX: 'QuickEx',
+  LETSEXCHANGE: 'LetsExchange'
+}
+
+function assetCaption(asset: Asset, includeChain: boolean = true) {
   const map: Record<string, string> = {
     ETH: 'ERC20',
     TRON: 'TRC20',
@@ -22,7 +32,7 @@ function assetCaption(asset: Asset) {
 
   let caption = ticker
 
-  if (ref && map[chain]) {
+  if (ref && map[chain] && includeChain) {
     caption += ` (${map[chain]})`
   }
 
@@ -253,24 +263,31 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
         return ctx.scene.leave()
       }
 
+      quoteResponse.routes.sort((a, b) => parseFloat(b.expectedBuyAmount) - parseFloat(a.expectedBuyAmount))
       ctx.scene.session.routes = quoteResponse.routes
 
+      const outTicker = assetCaption(assetOut!, false)
       const routeLines = quoteResponse.routes.map((route, i) => {
-        const provider = route.providers.join(', ')
+        const provider = route.providers[0]
         const time = formatTime(route.estimatedTime.total)
-        return `*${i + 1}.* *${provider}*\n   ~${route.expectedBuyAmount} ${assetCaption(assetOut!)} (min ${route.expectedBuyAmountMaxSlippage}) — ~${time}`
+        return `*${i + 1}.* ${providerTitles[provider] ?? provider}\n    ${route.expectedBuyAmount} ${outTicker}  ·  ${time}`
       })
 
-      const routeButtons = quoteResponse.routes.map((route, i) =>
-        Markup.button.callback(`${i + 1}. ${route.providers.join(', ')}`, `route_${i}`)
-      )
+      const routeButtons = quoteResponse.routes.map((route, i) => {
+        const provider = route.providers[0]
+        return Markup.button.callback(`${i + 1}. ${providerTitles[provider] ?? provider}`, `route_${i}`)
+      })
 
-      const buttonRows = routeButtons.map(b => [b])
+      const buttonRows: ReturnType<typeof Markup.button.callback>[][] = []
+      for (let i = 0; i < routeButtons.length; i += 2) {
+        buttonRows.push(routeButtons.slice(i, i + 2))
+      }
       buttonRows.push(cancelButtonRow)
 
       await editSwapMessage(
         ctx,
-        `🔄 *Swap*\n\n${progress}\n\n📊 *Available Quotes:*\n\n${routeLines.join('\n\n')}\n\nSelect a provider:`,
+        `🔄 *Swap*\n\n${progress}\n\n` +
+          `📊 *Quotes* (${quoteResponse.routes.length}):\n\n${routeLines.join('\n\n')}\n\n`,
         { ...Markup.inlineKeyboard(buttonRows) }
       )
 
