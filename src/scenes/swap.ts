@@ -2,12 +2,12 @@ import { Markup, Scenes } from 'telegraf'
 import { message } from 'telegraf/filters'
 import { FEATURED_IDENTIFIERS } from '../config/assets'
 import { getAssetByIdentifier, getAssets, getProvidersForPair } from '../db/database'
-import { Asset, SwapContext } from '../types/context'
+import { Asset, SwapContext, SwapSessionData } from '../types/context'
 import { fetchQuote } from '../utils/api'
 
-const CANCEL_TEXT = '\n\nType /cancel to cancel the swap at any time.'
-
 const cancelButtonRow = [Markup.button.callback('❌ Cancel Swap', 'cancel_swap')]
+
+// --- Helpers ---
 
 function assetCaption(asset: Asset) {
   const map: Record<string, string> = {
@@ -28,10 +28,13 @@ function assetCaption(asset: Asset) {
   return caption
 }
 
-function assetKeyboard(assets: Asset[], excludeIdentifier?: string) {
-  const filtered = excludeIdentifier ? assets.filter(a => a.identifier !== excludeIdentifier) : assets
-
-  const buttons = filtered.map(a => Markup.button.callback(assetCaption(a), `select_${a.identifier}`))
+function assetKeyboard(assets: Asset[], disabledIdentifier?: string) {
+  const buttons = assets.map(a => {
+    if (a.identifier === disabledIdentifier) {
+      return Markup.button.callback(`✓ ${assetCaption(a)}`, 'disabled')
+    }
+    return Markup.button.callback(assetCaption(a), `select_${a.identifier}`)
+  })
 
   const rows: ReturnType<typeof Markup.button.callback>[][] = []
   for (let i = 0; i < buttons.length; i += 2) {
@@ -53,17 +56,45 @@ function formatFees(fees: { type: string; asset: string; amount: string }[]): st
   return fees.map(f => `  • ${f.type}: ${f.amount} ${f.asset}`).join('\n')
 }
 
-async function cancelAndLeave(ctx: SwapContext) {
-  await ctx.answerCbQuery('Swap cancelled')
-  await ctx.editMessageText('❌ Swap cancelled.')
-  return ctx.scene.leave()
+function buildProgress(s: SwapSessionData): string {
+  const lines: string[] = []
+  if (s.assetIn) lines.push(`✅ Send: *${assetCaption(s.assetIn)}*`)
+  if (s.assetOut) lines.push(`✅ Receive: *${assetCaption(s.assetOut)}*`)
+  if (s.amount != null && s.assetIn) lines.push(`✅ Amount: *${s.amount} ${assetCaption(s.assetIn)}*`)
+  if (s.destinationAddress) lines.push(`✅ Destination: \`${s.destinationAddress}\``)
+  if (s.refundAddress) lines.push(`✅ Refund: \`${s.refundAddress}\``)
+  return lines.join('\n')
 }
+
+async function editSwapMessage(ctx: SwapContext, text: string, extra?: Record<string, unknown>) {
+  const messageId = ctx.scene.session.swapMessageId
+  if (!messageId || !ctx.chat) return
+  try {
+    await ctx.telegram.editMessageText(ctx.chat.id, messageId, undefined, text, {
+      parse_mode: 'Markdown',
+      ...extra
+    })
+  } catch {
+    // Message may have been deleted or content unchanged
+  }
+}
+
+async function deleteUserMessage(ctx: SwapContext) {
+  try {
+    await ctx.deleteMessage()
+  } catch {
+    // May lack permission
+  }
+}
+
+// --- Wizard ---
 
 const swapWizard = new Scenes.WizardScene<SwapContext>(
   'swap-wizard',
 
-  // Step 0: Select assetIn
+  // Step 0: Send swap message with assetIn keyboard
   async ctx => {
+    ctx.scene.session.swapMessageId = undefined
     ctx.scene.session.assetIn = undefined
     ctx.scene.session.assetOut = undefined
     ctx.scene.session.amount = undefined
@@ -79,107 +110,120 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
       return ctx.scene.leave()
     }
 
-    await ctx.reply('🔄 *Swap — Step 1/5*\n\nSelect the asset you want to *send*:' + CANCEL_TEXT, {
+    const msg = await ctx.reply('🔄 *Swap*\n\nSelect the asset you want to *send*:', {
       parse_mode: 'Markdown',
       ...assetKeyboard(featuredAssets)
     })
+
+    ctx.scene.session.swapMessageId = msg.message_id
 
     return ctx.wizard.next()
   },
 
   // Step 1: Waiting for assetIn callback
   async ctx => {
-    if ('message' in (ctx.update as any)) {
-      await ctx.reply('⚠️ Please select an asset from the buttons above.')
-    }
+    await deleteUserMessage(ctx)
   },
 
   // Step 2: Waiting for assetOut callback
   async ctx => {
-    if ('message' in (ctx.update as any)) {
-      await ctx.reply('⚠️ Please select an asset from the buttons above.')
-    }
+    await deleteUserMessage(ctx)
   },
 
   // Step 3: Handle amount input
   async ctx => {
-    if (!ctx.has(message('text'))) {
-      await ctx.reply('⚠️ Please enter a valid number.')
-      return
-    }
+    if (!ctx.has(message('text'))) return
+
+    await deleteUserMessage(ctx)
 
     const amount = parseFloat(ctx.message.text)
 
     if (isNaN(amount) || amount <= 0) {
-      await ctx.reply('⚠️ Please enter a valid positive number.')
+      const progress = buildProgress(ctx.scene.session)
+      await editSwapMessage(
+        ctx,
+        `🔄 *Swap*\n\n${progress}\n\n⚠️ Please enter a valid positive number.\n\n💰 Enter the amount of *${assetCaption(ctx.scene.session.assetIn!)}* you want to swap:`,
+        { ...Markup.inlineKeyboard([cancelButtonRow]) }
+      )
       return
     }
 
     ctx.scene.session.amount = amount
 
-    await ctx.reply(
-      `📍 *Swap — Step 4/5*\n\nEnter your *${ctx.scene.session.assetOut!.name}* destination address\n(where you want to receive funds):` +
-        CANCEL_TEXT,
-      { parse_mode: 'Markdown' }
+    const progress = buildProgress(ctx.scene.session)
+    await editSwapMessage(
+      ctx,
+      `🔄 *Swap*\n\n${progress}\n\n📍 Enter your *${assetCaption(ctx.scene.session.assetOut!)}* destination address:`,
+      { ...Markup.inlineKeyboard([cancelButtonRow]) }
     )
 
     return ctx.wizard.next()
   },
 
-  // Step 4: Handle destination address, ask for refund address
+  // Step 4: Handle destination address
   async ctx => {
-    if (!ctx.has(message('text'))) {
-      await ctx.reply('⚠️ Please enter a valid wallet address.')
-      return
-    }
+    if (!ctx.has(message('text'))) return
+
+    await deleteUserMessage(ctx)
 
     const address = ctx.message.text.trim()
 
     if (address.length < 10) {
-      await ctx.reply("⚠️ That doesn't look like a valid address. Please try again.")
+      const progress = buildProgress(ctx.scene.session)
+      await editSwapMessage(
+        ctx,
+        `🔄 *Swap*\n\n${progress}\n\n⚠️ That doesn't look like a valid address.\n\n📍 Enter your *${assetCaption(ctx.scene.session.assetOut!)}* destination address:`,
+        { ...Markup.inlineKeyboard([cancelButtonRow]) }
+      )
       return
     }
 
     ctx.scene.session.destinationAddress = address
 
-    await ctx.reply(
-      `🔙 *Swap — Step 5/5*\n\nEnter your *${ctx.scene.session.assetIn!.name}* refund address\n(in case the swap fails, funds will be returned here):` +
-        CANCEL_TEXT,
-      { parse_mode: 'Markdown' }
+    const progress = buildProgress(ctx.scene.session)
+    await editSwapMessage(
+      ctx,
+      `🔄 *Swap*\n\n${progress}\n\n🔙 Enter your *${assetCaption(ctx.scene.session.assetIn!)}* refund address:`,
+      { ...Markup.inlineKeyboard([cancelButtonRow]) }
     )
 
     return ctx.wizard.next()
   },
 
-  // Step 5: Handle refund address, fetch dry quotes, show route options
+  // Step 5: Handle refund address, fetch quotes, show route options
   async ctx => {
-    if (!ctx.has(message('text'))) {
-      await ctx.reply('⚠️ Please enter a valid wallet address.')
-      return
-    }
+    if (!ctx.has(message('text'))) return
+
+    await deleteUserMessage(ctx)
 
     const refundAddress = ctx.message.text.trim()
 
     if (refundAddress.length < 10) {
-      await ctx.reply("⚠️ That doesn't look like a valid address. Please try again.")
+      const progress = buildProgress(ctx.scene.session)
+      await editSwapMessage(
+        ctx,
+        `🔄 *Swap*\n\n${progress}\n\n⚠️ That doesn't look like a valid address.\n\n🔙 Enter your *${assetCaption(ctx.scene.session.assetIn!)}* refund address:`,
+        { ...Markup.inlineKeyboard([cancelButtonRow]) }
+      )
       return
     }
 
     ctx.scene.session.refundAddress = refundAddress
 
     const { assetIn, assetOut, amount, destinationAddress } = ctx.scene.session
+    const progress = buildProgress(ctx.scene.session)
 
     const providers = getProvidersForPair(assetIn!.identifier, assetOut!.identifier)
 
     if (providers.length === 0) {
-      await ctx.reply(
-        `❌ No providers support swapping *${assetIn!.name}* → *${assetOut!.name}*.\n\nPlease try a different pair or /cancel.`,
-        { parse_mode: 'Markdown' }
+      await editSwapMessage(
+        ctx,
+        `🔄 *Swap*\n\n${progress}\n\n❌ No providers support this pair.\nPlease start again with /swap.`
       )
-      return
+      return ctx.scene.leave()
     }
 
-    const loadingMsg = await ctx.reply('⏳ Fetching quotes...')
+    await editSwapMessage(ctx, `🔄 *Swap*\n\n${progress}\n\n⏳ Fetching quotes...`)
 
     try {
       const quoteResponse = await fetchQuote({
@@ -192,24 +236,19 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
       })
 
       if (!quoteResponse.routes || quoteResponse.routes.length === 0) {
-        await ctx.reply('❌ No swap routes available for this pair. Please try a different combination.', {
-          ...Markup.inlineKeyboard([cancelButtonRow])
-        })
-        return
+        await editSwapMessage(
+          ctx,
+          `🔄 *Swap*\n\n${progress}\n\n❌ No swap routes available for this pair.\nPlease start again with /swap.`
+        )
+        return ctx.scene.leave()
       }
 
       ctx.scene.session.routes = quoteResponse.routes
 
-      try {
-        await ctx.deleteMessage(loadingMsg.message_id)
-      } catch {
-        // Ignore
-      }
-
       const routeLines = quoteResponse.routes.map((route, i) => {
         const provider = route.providers.join(', ')
         const time = formatTime(route.estimatedTime.total)
-        return `*${i + 1}.* *${provider}*\n   Receive: ~${route.expectedBuyAmount} ${assetOut!.name} (min ${route.expectedBuyAmountMaxSlippage})\n   Time: ~${time}`
+        return `*${i + 1}.* *${provider}*\n   ~${route.expectedBuyAmount} ${assetCaption(assetOut!)} (min ${route.expectedBuyAmountMaxSlippage}) — ~${time}`
       })
 
       const routeButtons = quoteResponse.routes.map((route, i) =>
@@ -219,44 +258,39 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
       const buttonRows = routeButtons.map(b => [b])
       buttonRows.push(cancelButtonRow)
 
-      await ctx.reply(
-        `📊 *Available Quotes*\n\n` +
-          `*${amount} ${assetIn!.name}* → *${assetOut!.name}*\n\n` +
-          routeLines.join('\n\n') +
-          `\n\nSelect a provider:`,
-        {
-          parse_mode: 'Markdown',
-          ...Markup.inlineKeyboard(buttonRows)
-        }
+      await editSwapMessage(
+        ctx,
+        `🔄 *Swap*\n\n${progress}\n\n📊 *Available Quotes:*\n\n${routeLines.join('\n\n')}\n\nSelect a provider:`,
+        { ...Markup.inlineKeyboard(buttonRows) }
       )
 
       return ctx.wizard.next()
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Unknown error'
       console.error('[Swap] Quote error:', error)
-      await ctx.reply(`❌ Failed to fetch quote: ${errMsg}\n\nPlease try again or /cancel.`)
-      return
+      await editSwapMessage(
+        ctx,
+        `🔄 *Swap*\n\n${progress}\n\n❌ Failed to fetch quote: ${errMsg}\nPlease start again with /swap.`
+      )
+      return ctx.scene.leave()
     }
   },
 
   // Step 6: Waiting for route selection
   async ctx => {
-    if ('message' in (ctx.update as any)) {
-      await ctx.reply('⚠️ Please select a provider from the buttons above.')
-    }
+    await deleteUserMessage(ctx)
   },
 
   // Step 7: Waiting for confirm/cancel
   async ctx => {
-    if ('message' in (ctx.update as any)) {
-      await ctx.reply('⚠️ Please use the buttons to confirm or cancel.')
-    }
+    await deleteUserMessage(ctx)
   }
 )
 
-// --- Handle /cancel text command inside the wizard ---
+// --- /cancel command inside wizard ---
 swapWizard.command('cancel', async ctx => {
-  await ctx.reply('❌ Swap cancelled.')
+  await deleteUserMessage(ctx)
+  await editSwapMessage(ctx, '❌ Swap cancelled.')
   return ctx.scene.leave()
 })
 
@@ -274,17 +308,15 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
     }
 
     ctx.scene.session.assetIn = asset
-    await ctx.answerCbQuery(`Selected ${asset.name}`)
-    await ctx.editMessageText(`✅ Sending: *${asset.name}*`, {
-      parse_mode: 'Markdown'
-    })
+    await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
 
     const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
 
-    await ctx.reply('🔄 *Swap — Step 2/5*\n\nSelect the asset you want to *receive*:' + CANCEL_TEXT, {
-      parse_mode: 'Markdown',
-      ...assetKeyboard(featuredAssets, asset.identifier)
-    })
+    const progress = buildProgress(ctx.scene.session)
+    await ctx.editMessageText(
+      `🔄 *Swap*\n\n${progress}\n\nSelect the asset you want to *receive*:`,
+      { parse_mode: 'Markdown', ...assetKeyboard(featuredAssets, asset.identifier) }
+    )
 
     return ctx.wizard.next()
   }
@@ -299,15 +331,12 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
     }
 
     ctx.scene.session.assetOut = asset
-    await ctx.answerCbQuery(`Selected ${asset.name}`)
-    await ctx.editMessageText(`✅ Receiving: *${asset.name}*`, {
-      parse_mode: 'Markdown'
-    })
+    await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
 
-    await ctx.reply(
-      `💰 *Swap — Step 3/5*\n\nEnter the amount of *${ctx.scene.session.assetIn!.name}* you want to swap:` +
-        CANCEL_TEXT,
-      { parse_mode: 'Markdown' }
+    const progress = buildProgress(ctx.scene.session)
+    await ctx.editMessageText(
+      `🔄 *Swap*\n\n${progress}\n\n💰 Enter the amount of *${assetCaption(ctx.scene.session.assetIn!)}* you want to swap:`,
+      { parse_mode: 'Markdown', ...Markup.inlineKeyboard([cancelButtonRow]) }
     )
 
     return ctx.wizard.next()
@@ -334,11 +363,11 @@ swapWizard.action(/^route_(\d+)$/, async ctx => {
 
   await ctx.editMessageText(
     `📋 *Swap Summary*\n\n` +
-      `*Send:* ${amount} ${assetIn.name}\n` +
-      `*Receive:* ~${route.expectedBuyAmount} ${assetOut.name}\n` +
-      `*Min receive:* ${route.expectedBuyAmountMaxSlippage} ${assetOut.name}\n\n` +
+      `*Send:* ${amount} ${assetCaption(assetIn)}\n` +
+      `*Receive:* ~${route.expectedBuyAmount} ${assetCaption(assetOut)}\n` +
+      `*Min receive:* ${route.expectedBuyAmountMaxSlippage} ${assetCaption(assetOut)}\n\n` +
       `*Destination:*\n\`${destinationAddress}\`\n` +
-      `*Refund address:*\n\`${refundAddress}\`\n\n` +
+      `*Refund:*\n\`${refundAddress}\`\n\n` +
       `*Provider:* ${route.providers.join(', ')}\n` +
       `*Estimated time:* ${estimatedTime}\n` +
       `*Fees:*\n${fees}\n\n` +
@@ -352,7 +381,7 @@ swapWizard.action(/^route_(\d+)$/, async ctx => {
   return ctx.wizard.next()
 })
 
-// Confirm swap — call API with dry: false using the selected route's providers
+// Confirm swap — call API with dry: false
 swapWizard.action('confirm_swap', async ctx => {
   const { assetIn, assetOut, amount, destinationAddress, refundAddress, quote } = ctx.scene.session
 
@@ -376,14 +405,14 @@ swapWizard.action('confirm_swap', async ctx => {
     })
 
     if (!quoteResponse.routes || quoteResponse.routes.length === 0) {
-      await ctx.reply('❌ Swap failed: no routes available. Please try again with /swap.')
+      await ctx.editMessageText('❌ Swap failed: no routes available. Please try again with /swap.')
       return ctx.scene.leave()
     }
 
     const route = quoteResponse.routes[0]
 
     if (!route.qrCodeDataURL) {
-      await ctx.reply('❌ Swap confirmed but no QR code received. Please contact support.')
+      await ctx.editMessageText('❌ Swap confirmed but no QR code received. Please contact support.')
       return ctx.scene.leave()
     }
 
@@ -393,18 +422,22 @@ swapWizard.action('confirm_swap', async ctx => {
 
     const inboundAddress = route.inboundAddress || route.targetAddress
 
+    // Update swap message to confirmed state
+    await ctx.editMessageText(
+      `✅ *Swap Confirmed!*\n\n` +
+        `*Send:* ${amount} ${assetCaption(assetIn)}\n` +
+        `*Receive:* ~${route.expectedBuyAmount} ${assetCaption(assetOut)}\n` +
+        `*Send to:*\n\`${inboundAddress}\`\n\n` +
+        `*Provider:* ${route.providers.join(', ')}\n` +
+        `*Estimated time:* ${formatTime(route.estimatedTime.total)}`,
+      { parse_mode: 'Markdown' }
+    )
+
+    // Send QR code as separate message
     await ctx.replyWithPhoto(
       { source: qrBuffer },
       {
-        caption:
-          `✅ *Swap Confirmed!*\n\n` +
-          `📱 *Send your ${assetIn.name}*\n\n` +
-          `*Amount:* ${amount} ${assetIn.name}\n` +
-          `*You will receive:* ~${route.expectedBuyAmount} ${assetOut.name}\n` +
-          `*Send to:*\n\`${inboundAddress}\`\n\n` +
-          `*Provider:* ${route.providers.join(', ')}\n` +
-          `⏳ *Estimated time:* ${formatTime(route.estimatedTime.total)}\n\n` +
-          `Scan the QR code or copy the address above.`,
+        caption: `📱 Scan to send *${amount} ${assetCaption(assetIn)}*`,
         parse_mode: 'Markdown'
       }
     )
@@ -413,14 +446,21 @@ swapWizard.action('confirm_swap', async ctx => {
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error'
     console.error('[Swap] Confirm error:', error)
-    await ctx.reply(`❌ Swap confirmation failed: ${errMsg}\n\nPlease try again with /swap.`)
+    await ctx.editMessageText(`❌ Swap confirmation failed: ${errMsg}\n\nPlease try again with /swap.`)
     return ctx.scene.leave()
   }
 })
 
+// Disabled button (already selected asset)
+swapWizard.action('disabled', async ctx => {
+  await ctx.answerCbQuery('Already selected as send asset')
+})
+
 // Cancel swap (inline button)
 swapWizard.action('cancel_swap', async ctx => {
-  return cancelAndLeave(ctx)
+  await ctx.answerCbQuery('Swap cancelled')
+  await ctx.editMessageText('❌ Swap cancelled.')
+  return ctx.scene.leave()
 })
 
 export { swapWizard }

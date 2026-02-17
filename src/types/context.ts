@@ -55,6 +55,7 @@ export interface QuoteResponse {
 // --- Session / Context ---
 
 export interface SwapSessionData extends Scenes.WizardSessionData {
+  swapMessageId?: number
   assetIn?: Asset
   assetOut?: Asset
   amount?: number
