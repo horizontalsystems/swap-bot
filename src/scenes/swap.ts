@@ -1,6 +1,6 @@
 import { Markup, Scenes } from 'telegraf'
 import { message } from 'telegraf/filters'
-import { FEATURED_IDENTIFIERS } from '../config/assets'
+import { ALLOWED_PROVIDERS, FEATURED_IDENTIFIERS } from '../config/assets'
 import { S, t } from '../config/strings'
 import { getAssetByIdentifier, getAssets, getProvidersForPair } from '../db/database'
 import { Asset, SwapContext, SwapSessionData } from '../types/context'
@@ -62,10 +62,6 @@ function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
   return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`
-}
-
-function formatFees(fees: { type: string; asset: string; amount: string }[]): string {
-  return fees.map(f => `  • ${f.type}: ${f.amount} ${f.asset}`).join('\n')
 }
 
 function buildProgress(s: SwapSessionData): string {
@@ -238,7 +234,9 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     const { assetIn, assetOut, amount, destinationAddress } = ctx.scene.session
     const progress = buildProgress(ctx.scene.session)
 
-    const providers = getProvidersForPair(assetIn!.identifier, assetOut!.identifier)
+    const providers = getProvidersForPair(assetIn!.identifier, assetOut!.identifier).filter(p =>
+      ALLOWED_PROVIDERS.includes(p)
+    )
 
     if (providers.length === 0) {
       await editSwapMessage(ctx, t(S.noProviders, { progress }))
@@ -397,9 +395,8 @@ swapWizard.action(/^route_(\d+)$/, async ctx => {
       minReceive: route.expectedBuyAmountMaxSlippage,
       destination: destinationAddress,
       refund: refundAddress,
-      provider: route.providers.map(p => providerName(p)).join(', '),
-      time: formatTime(route.estimatedTime.total),
-      fees: formatFees(route.fees)
+      provider: providerName(route.providers[0]),
+      time: formatTime(route.estimatedTime.total)
     }),
     {
       parse_mode: 'Markdown',

@@ -48,8 +48,7 @@ export const S = {
     '*Destination:*\n`{destination}`\n' +
     '*Refund:*\n`{refund}`\n\n' +
     '*Provider:* {provider}\n' +
-    '*Estimated time:* {time}\n' +
-    '*Fees:*\n{fees}\n\n' +
+    '*Estimated time:* {time}\n\n' +
     'Confirm this swap?',
   confirmButton: '✅ Confirm',
 

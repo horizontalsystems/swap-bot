@@ -4,6 +4,16 @@ export const SYNC_INTERVAL_MS = 60 * 60 * 1000
 // Featured asset identifiers shown to the user in the swap flow.
 // Must match the token identifier format from the provider API.
 // Full asset details are resolved from the database at runtime.
+// Allowed providers for quoting. Only these will be requested.
+export const ALLOWED_PROVIDERS: string[] = [
+  'THORCHAIN',
+  'NEAR',
+  'LETSEXCHANGE',
+  'QUICKEX',
+  'STEALTHEX',
+  'SWAPUZ'
+]
+
 export const FEATURED_IDENTIFIERS: string[] = [
   'BTC.BTC',
   'ETH.ETH',
