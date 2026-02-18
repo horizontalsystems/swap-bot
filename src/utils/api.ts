@@ -31,6 +31,11 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 
   const responseText = await response.text()
   console.log(`[API] ${options.method || 'GET'} ${endpoint} — ${response.status}`)
+  try {
+    console.log(JSON.stringify(JSON.parse(responseText), null, 2))
+  } catch {
+    console.log(responseText)
+  }
 
   if (!response.ok) {
     throw new Error(`API error (${response.status}): ${responseText}`)

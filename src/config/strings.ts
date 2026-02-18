@@ -3,6 +3,7 @@
 
 export const S = {
   // --- General buttons ---
+  back: '⬅️ Back',
   cancelSwap: '❌ Cancel Swap',
 
   // --- Step 0: Select send asset ---
@@ -49,16 +50,26 @@ export const S = {
 
   // --- Swap confirmed ---
   swapConfirmed:
-    '✅ *Swap Confirmed!*\n\n' +
+    '✅ *Swap Prepared!*\n\n' +
     '*Send:* {sendAmount} {sendAsset}\n' +
     '*Receive:* ~{receiveAmount} {receiveAsset}\n' +
     '*Send to:*\n`{inboundAddress}`\n\n' +
     '*Provider:* {provider}\n' +
-    '*Estimated time:* {time}\n\n' +
+    '*Estimated time:* {time}\n' +
+    '*Expires in:* {expiration}\n\n' +
     '📱 Scan QR to send *{sendAmount} {sendAsset}*',
 
   // --- Swap errors ---
-  confirmingSwap: '⏳ Confirming swap...',
+  preparingSwap:
+    '📋 *Swap Summary*\n\n' +
+    '*Send:* {sendAmount} {sendAsset}\n' +
+    '*Receive:* ~{receiveAmount} {receiveAsset}\n' +
+    '*Min receive:* {minReceive} {receiveAsset}\n\n' +
+    '*Destination:*\n`{destination}`\n' +
+    '*Refund:*\n`{refund}`\n\n' +
+    '*Provider:* {provider}\n' +
+    '*Estimated time:* {time}\n\n' +
+    '⏳ Preparing swap...',
   swapFailedNoRoutes: '❌ Swap failed: no routes available.',
   swapNoQr: '❌ Swap confirmed but no QR code received. Please contact support.',
   swapConfirmError: '❌ Swap confirmation failed: {error}',

@@ -3,6 +3,10 @@ import { S, t } from '../../config/strings'
 import { Asset, SwapContext, SwapSessionData } from '../../types/context'
 
 export const cancelButtonRow = [Markup.button.callback(S.cancelSwap, 'cancel_swap')]
+export const backCancelRow = [
+  Markup.button.callback(S.back, 'go_back'),
+  Markup.button.callback(S.cancelSwap, 'cancel_swap')
+]
 
 export const providerTitles: Record<string, string> = {
   THORCHAIN: 'THORChain',
@@ -37,7 +41,7 @@ export function assetCaption(asset: Asset, includeChain: boolean = true) {
   return caption
 }
 
-export function assetKeyboard(assets: Asset[], disabledIdentifier?: string) {
+export function assetKeyboard(assets: Asset[], disabledIdentifier?: string, showBack: boolean = false) {
   const buttons = assets.map(a => {
     if (a.identifier === disabledIdentifier) {
       return Markup.button.callback(`✓ ${assetCaption(a)}`, 'disabled')
@@ -50,15 +54,20 @@ export function assetKeyboard(assets: Asset[], disabledIdentifier?: string) {
     rows.push(buttons.slice(i, i + 2))
   }
 
-  rows.push(cancelButtonRow)
+  rows.push(showBack ? backCancelRow : cancelButtonRow)
   return Markup.inlineKeyboard(rows)
 }
 
 export function formatTime(seconds: number): string {
   if (seconds < 60) return `${seconds}s`
-  const mins = Math.floor(seconds / 60)
+  const hours = Math.floor(seconds / 3600)
+  const mins = Math.floor((seconds % 3600) / 60)
   const secs = seconds % 60
-  return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`
+  const parts: string[] = []
+  if (hours > 0) parts.push(`${hours}h`)
+  if (mins > 0) parts.push(`${mins}m`)
+  if (secs > 0 && hours === 0) parts.push(`${secs}s`)
+  return parts.join(' ')
 }
 
 export function buildProgress(s: SwapSessionData): string {

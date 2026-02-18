@@ -3,11 +3,19 @@ import { MemolessAssetItem } from '../types/context'
 const MEMOLESS_API_BASE = 'https://swap.unstoppable.money/memoless/api/v1'
 
 export async function fetchMemolessAssets(): Promise<string[]> {
+  console.log('[Memoless] Fetching assets...')
   const response = await fetch(`${MEMOLESS_API_BASE}/assets`)
-  if (!response.ok) {
-    throw new Error(`Memoless API error (${response.status})`)
+  const text = await response.text()
+  console.log(`[Memoless] Assets response (${response.status}):`)
+  try {
+    console.log(JSON.stringify(JSON.parse(text), null, 2))
+  } catch {
+    console.log(text)
   }
-  const data = (await response.json()) as { success: boolean; assets: MemolessAssetItem[] }
+  if (!response.ok) {
+    throw new Error(`Memoless API error (${response.status}): ${text}`)
+  }
+  const data = JSON.parse(text) as { success: boolean; assets: MemolessAssetItem[] }
   return data.assets.filter(a => a.status === 'Available').map(a => a.asset)
 }
 
@@ -36,7 +44,12 @@ export async function registerMemoless(params: {
     body: JSON.stringify(params)
   })
   const text = await response.text()
-  console.log(`[Memoless] Register response (${response.status}):`, text)
+  console.log(`[Memoless] Register response (${response.status}):`)
+  try {
+    console.log(JSON.stringify(JSON.parse(text), null, 2))
+  } catch {
+    console.log(text)
+  }
   if (!response.ok) {
     throw new Error(`Memoless register error (${response.status}): ${text}`)
   }
@@ -55,7 +68,12 @@ export async function preflightMemoless(params: {
     body: JSON.stringify(params)
   })
   const text = await response.text()
-  console.log(`[Memoless] Preflight response (${response.status}):`, text)
+  console.log(`[Memoless] Preflight response (${response.status}):`)
+  try {
+    console.log(JSON.stringify(JSON.parse(text), null, 2))
+  } catch {
+    console.log(text)
+  }
   if (!response.ok) {
     throw new Error(`Memoless preflight error (${response.status}): ${text}`)
   }
