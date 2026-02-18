@@ -1,6 +1,8 @@
 import { SYNC_INTERVAL_MS } from '../config/assets'
-import { getTokenCount, replaceMemolessAssets, upsertTokens } from '../db/database'
-import { fetchAllTokens, fetchMemolessAssets } from '../utils/api'
+import { replaceMemolessAssets } from '../db/memoless'
+import { getTokenCount, upsertTokens } from '../db/tokens'
+import { fetchAllTokens } from '../utils/api'
+import { fetchMemolessAssets } from '../utils/memoless-api'
 
 let syncInterval: NodeJS.Timeout | null = null
 

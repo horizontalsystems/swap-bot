@@ -3,7 +3,8 @@ import dotenv from 'dotenv'
 import { SwapContext } from './types/context'
 import { swapWizard } from './scenes/swap'
 import { startPeriodicSync, stopPeriodicSync, syncTokens } from './services/token-sync'
-import { closeDb, getTokenCount } from './db/database'
+import { closeDb } from './db/database'
+import { getTokenCount } from './db/tokens'
 
 dotenv.config()
 
