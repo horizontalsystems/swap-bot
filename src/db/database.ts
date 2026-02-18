@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import path from 'path'
 import { Asset } from '../types/context'
 
-const DB_PATH = path.resolve(process.cwd(), 'swap-bot.db')
+const DB_PATH = path.resolve(__dirname, 'swap-bot.db')
 
 let db: Database.Database
 
