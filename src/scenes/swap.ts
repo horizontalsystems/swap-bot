@@ -4,7 +4,7 @@ import { ALLOWED_PROVIDERS, FEATURED_IDENTIFIERS } from '../config/assets'
 import { S, t } from '../config/strings'
 import { getAssetByIdentifier, getAssets, getProvidersForPair } from '../db/database'
 import { Asset, SwapContext, SwapSessionData } from '../types/context'
-import { fetchQuote } from '../utils/api'
+import { fetchQuote, preflightMemoless, registerMemoless } from '../utils/api'
 import { validateAddress } from '../utils/addressValidator'
 
 const cancelButtonRow = [Markup.button.callback(S.cancelSwap, 'cancel_swap')]
@@ -438,26 +438,63 @@ swapWizard.action('confirm_swap', async ctx => {
     }
 
     const route = quoteResponse.routes[0]
+    const isThorchain = route.providers[0] === 'THORCHAIN'
 
-    if (!route.qrCodeDataURL) {
+    let qrDataURL: string | undefined
+    let inboundAddr: string | undefined
+    let sendAmount: number = amount
+
+    if (isThorchain) {
+      console.log('[Swap] THORChain route detected, using memoless flow')
+
+      const memo = route.memo
+      if (!memo) {
+        console.error('[Swap] No memo found in route for THORChain')
+        await ctx.editMessageText(S.swapNoQr)
+        await sendWelcome(ctx)
+        return ctx.scene.leave()
+      }
+
+      console.log('[Swap] Memo:', memo)
+
+      const registerData = await registerMemoless({
+        asset: assetIn.identifier,
+        memo,
+        requested_in_asset_amount: amount.toString()
+      })
+
+      const preflightData = await preflightMemoless({
+        asset: assetIn.identifier,
+        reference: registerData.reference,
+        amount: registerData.suggested_in_asset_amount
+      })
+
+      qrDataURL = preflightData.data.qr_code_data_url
+      inboundAddr = preflightData.data.inbound_address
+      sendAmount = parseFloat(registerData.suggested_in_asset_amount)
+      console.log('[Swap] Memoless flow complete — inbound:', inboundAddr, 'sendAmount:', sendAmount)
+    } else {
+      qrDataURL = route.qrCodeDataURL
+      inboundAddr = route.inboundAddress || route.targetAddress
+    }
+
+    if (!qrDataURL) {
       await ctx.editMessageText(S.swapNoQr)
       await sendWelcome(ctx)
       return ctx.scene.leave()
     }
 
     // Convert data URL to Buffer
-    const base64Data = route.qrCodeDataURL.replace(/^data:image\/png;base64,/, '')
+    const base64Data = qrDataURL.replace(/^data:image\/png;base64,/, '')
     const qrBuffer = Buffer.from(base64Data, 'base64')
-
-    const inboundAddress = route.inboundAddress || route.targetAddress
 
     await ctx.editMessageText(
       t(S.swapConfirmed, {
-        sendAmount: amount,
+        sendAmount,
         sendAsset: assetCaption(assetIn),
         receiveAmount: route.expectedBuyAmount,
         receiveAsset: assetCaption(assetOut),
-        inboundAddress: inboundAddress ?? '',
+        inboundAddress: inboundAddr ?? '',
         provider: route.providers.map(p => providerName(p)).join(', '),
         time: formatTime(route.estimatedTime.total)
       }),
@@ -467,7 +504,7 @@ swapWizard.action('confirm_swap', async ctx => {
     await ctx.replyWithPhoto(
       { source: qrBuffer },
       {
-        caption: t(S.qrCaption, { sendAmount: amount, sendAsset: assetCaption(assetIn) }),
+        caption: t(S.qrCaption, { sendAmount, sendAsset: assetCaption(assetIn) }),
         parse_mode: 'Markdown'
       }
     )
