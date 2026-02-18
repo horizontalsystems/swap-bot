@@ -85,14 +85,14 @@ export async function editSwapMessage(ctx: SwapContext, text: string, extra?: Re
   }
 }
 
-export async function sendWelcome(ctx: SwapContext) {
-  await ctx.reply(S.welcome, {
-    parse_mode: 'Markdown',
-    ...Markup.inlineKeyboard([
-      [Markup.button.callback(S.welcomeNewSwap, 'start_swap')],
-      [Markup.button.callback(S.welcomeHelp, 'show_help')]
-    ])
-  })
+export async function deleteSwapMessage(ctx: SwapContext) {
+  const messageId = ctx.scene.session.swapMessageId
+  if (!messageId || !ctx.chat) return
+  try {
+    await ctx.telegram.deleteMessage(ctx.chat.id, messageId)
+  } catch {
+    // Message may have been already deleted
+  }
 }
 
 export async function deleteUserMessage(ctx: SwapContext) {

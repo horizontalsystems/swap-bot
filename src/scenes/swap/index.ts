@@ -12,11 +12,11 @@ import {
   assetKeyboard,
   buildProgress,
   cancelButtonRow,
+  deleteSwapMessage,
   deleteUserMessage,
   editSwapMessage,
   formatTime,
-  providerName,
-  sendWelcome
+  providerName
 } from './helpers'
 
 // --- Wizard ---
@@ -39,7 +39,6 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
     if (featuredAssets.length === 0) {
       await ctx.reply(S.noAssetsAvailable)
-      await sendWelcome(ctx)
       return ctx.scene.leave()
     }
 
@@ -149,7 +148,6 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
     if (providers.length === 0) {
       await editSwapMessage(ctx, t(S.noProviders, { progress }))
-      await sendWelcome(ctx)
       return ctx.scene.leave()
     }
 
@@ -167,7 +165,6 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
       if (!quoteResponse.routes || quoteResponse.routes.length === 0) {
         await editSwapMessage(ctx, t(S.noRoutes, { progress }))
-        await sendWelcome(ctx)
         return ctx.scene.leave()
       }
 
@@ -206,7 +203,6 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
       const errMsg = error instanceof Error ? error.message : 'Unknown error'
       console.error('[Swap] Quote error:', error)
       await editSwapMessage(ctx, t(S.quoteError, { progress, error: errMsg }))
-      await sendWelcome(ctx)
       return ctx.scene.leave()
     }
   },
@@ -226,7 +222,6 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 swapWizard.command('cancel', async ctx => {
   await deleteUserMessage(ctx)
   await editSwapMessage(ctx, S.swapCancelled)
-  await sendWelcome(ctx)
   return ctx.scene.leave()
 })
 
@@ -286,7 +281,6 @@ swapWizard.action(/^route_(\d+)$/, async ctx => {
 
   if (!routes || !routes[index] || !assetIn || !assetOut || !amount || !destinationAddress || !refundAddress) {
     await ctx.answerCbQuery(S.sessionExpired)
-    await sendWelcome(ctx)
     return ctx.scene.leave()
   }
 
@@ -322,7 +316,6 @@ swapWizard.action('confirm_swap', async ctx => {
 
   if (!assetIn || !assetOut || !amount || !destinationAddress || !refundAddress || !quote) {
     await ctx.answerCbQuery(S.sessionExpired)
-    await sendWelcome(ctx)
     return ctx.scene.leave()
   }
 
@@ -342,7 +335,6 @@ swapWizard.action('confirm_swap', async ctx => {
 
     if (!quoteResponse.routes || quoteResponse.routes.length === 0) {
       await ctx.editMessageText(S.swapFailedNoRoutes)
-      await sendWelcome(ctx)
       return ctx.scene.leave()
     }
 
@@ -360,7 +352,6 @@ swapWizard.action('confirm_swap', async ctx => {
       if (!memo) {
         console.error('[Swap] No memo found in route for THORChain')
         await ctx.editMessageText(S.swapNoQr)
-        await sendWelcome(ctx)
         return ctx.scene.leave()
       }
 
@@ -389,7 +380,6 @@ swapWizard.action('confirm_swap', async ctx => {
 
     if (!qrDataURL) {
       await ctx.editMessageText(S.swapNoQr)
-      await sendWelcome(ctx)
       return ctx.scene.leave()
     }
 
@@ -397,34 +387,24 @@ swapWizard.action('confirm_swap', async ctx => {
     const base64Data = qrDataURL.replace(/^data:image\/png;base64,/, '')
     const qrBuffer = Buffer.from(base64Data, 'base64')
 
-    await ctx.editMessageText(
-      t(S.swapConfirmed, {
-        sendAmount,
-        sendAsset: assetCaption(assetIn),
-        receiveAmount: route.expectedBuyAmount,
-        receiveAsset: assetCaption(assetOut),
-        inboundAddress: inboundAddr ?? '',
-        provider: route.providers.map(p => providerName(p)).join(', '),
-        time: formatTime(route.estimatedTime.total)
-      }),
-      { parse_mode: 'Markdown' }
-    )
+    const caption = t(S.swapConfirmed, {
+      sendAmount,
+      sendAsset: assetCaption(assetIn),
+      receiveAmount: route.expectedBuyAmount,
+      receiveAsset: assetCaption(assetOut),
+      inboundAddress: inboundAddr ?? '',
+      provider: route.providers.map(p => providerName(p)).join(', '),
+      time: formatTime(route.estimatedTime.total)
+    })
 
-    await ctx.replyWithPhoto(
-      { source: qrBuffer },
-      {
-        caption: t(S.qrCaption, { sendAmount, sendAsset: assetCaption(assetIn) }),
-        parse_mode: 'Markdown'
-      }
-    )
+    await deleteSwapMessage(ctx)
+    await ctx.replyWithPhoto({ source: qrBuffer }, { caption, parse_mode: 'Markdown' })
 
-    await sendWelcome(ctx)
     return ctx.scene.leave()
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error'
     console.error('[Swap] Confirm error:', error)
     await ctx.editMessageText(t(S.swapConfirmError, { error: errMsg }))
-    await sendWelcome(ctx)
     return ctx.scene.leave()
   }
 })
@@ -438,7 +418,6 @@ swapWizard.action('disabled', async ctx => {
 swapWizard.action('cancel_swap', async ctx => {
   await ctx.answerCbQuery(S.swapCancelled)
   await ctx.editMessageText(S.swapCancelled)
-  await sendWelcome(ctx)
   return ctx.scene.leave()
 })
 

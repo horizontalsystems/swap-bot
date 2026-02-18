@@ -2,11 +2,6 @@
 // Template placeholders use {name} syntax and are replaced at runtime.
 
 export const S = {
-  // --- Welcome ---
-  welcome: '👋 Welcome to *SwapBot*!\n\nSwap crypto assets quickly and easily.',
-  welcomeNewSwap: '🔄 New Swap',
-  welcomeHelp: '❓ Help',
-
   // --- General buttons ---
   cancelSwap: '❌ Cancel Swap',
 
@@ -59,8 +54,8 @@ export const S = {
     '*Receive:* ~{receiveAmount} {receiveAsset}\n' +
     '*Send to:*\n`{inboundAddress}`\n\n' +
     '*Provider:* {provider}\n' +
-    '*Estimated time:* {time}',
-  qrCaption: '📱 Scan to send *{sendAmount} {sendAsset}*',
+    '*Estimated time:* {time}\n\n' +
+    '📱 Scan QR to send *{sendAmount} {sendAsset}*',
 
   // --- Swap errors ---
   confirmingSwap: '⏳ Confirming swap...',
