@@ -9,6 +9,13 @@ export interface TokenListItem {
   [key: string]: unknown
 }
 
+// --- Memoless asset (THORChain filtering) ---
+
+export interface MemolessAssetItem {
+  asset: string
+  status: string
+}
+
 // --- Asset (shown to user in bot, resolved from DB) ---
 
 export interface Asset {

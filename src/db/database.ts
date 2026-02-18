@@ -29,6 +29,13 @@ function initSchema(): void {
       providers TEXT
     );
   `)
+
+  database.exec(`DROP TABLE IF EXISTS memoless_assets`)
+  database.exec(`
+    CREATE TABLE memoless_assets (
+      identifier TEXT PRIMARY KEY
+    );
+  `)
 }
 
 // --- Token operations ---
@@ -91,7 +98,36 @@ export function getTokenCount(): number {
 }
 
 /**
+ * Replace the entire memoless_assets table with the given identifiers.
+ */
+export function replaceMemolessAssets(identifiers: string[]): void {
+  const database = getDb()
+  const stmt = database.prepare('INSERT INTO memoless_assets (identifier) VALUES (?)')
+
+  const transaction = database.transaction(() => {
+    database.exec('DELETE FROM memoless_assets')
+    for (const id of identifiers) {
+      stmt.run(id)
+    }
+  })
+
+  transaction()
+}
+
+/**
+ * Check if both identifiers exist in the memoless_assets table.
+ */
+export function areMemolessAssets(idIn: string, idOut: string): boolean {
+  const database = getDb()
+  const row = database
+    .prepare('SELECT COUNT(*) as cnt FROM memoless_assets WHERE identifier IN (?, ?)')
+    .get(idIn, idOut) as { cnt: number }
+  return row.cnt === 2
+}
+
+/**
  * Find providers that support BOTH tokens (intersection of their providers arrays).
+ * Removes THORCHAIN if either asset is missing from the memoless list.
  */
 export function getProvidersForPair(identifierIn: string, identifierOut: string): string[] {
   const database = getDb()
@@ -108,7 +144,13 @@ export function getProvidersForPair(identifierIn: string, identifierOut: string)
   const providersOut: string[] = JSON.parse(rowOut.providers)
   const outSet = new Set(providersOut)
 
-  return providersIn.filter(p => outSet.has(p))
+  let providers = providersIn.filter(p => outSet.has(p))
+
+  if (!areMemolessAssets(identifierIn, identifierOut)) {
+    providers = providers.filter(p => p !== 'THORCHAIN')
+  }
+
+  return providers
 }
 
 export function closeDb(): void {

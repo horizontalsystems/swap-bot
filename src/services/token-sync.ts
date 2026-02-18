@@ -1,6 +1,6 @@
 import { SYNC_INTERVAL_MS } from '../config/assets'
-import { getTokenCount, upsertTokens } from '../db/database'
-import { fetchAllTokens } from '../utils/api'
+import { getTokenCount, replaceMemolessAssets, upsertTokens } from '../db/database'
+import { fetchAllTokens, fetchMemolessAssets } from '../utils/api'
 
 let syncInterval: NodeJS.Timeout | null = null
 
@@ -14,6 +14,15 @@ export async function syncTokens(): Promise<void> {
   upsertTokens(tokens.map(t => ({ identifier: t.identifier, name: t.name, providers: t.providers })))
 
   console.log(`[Sync] Sync complete. Total tokens in DB: ${getTokenCount()}`)
+
+  try {
+    console.log('[Sync] Fetching memoless assets...')
+    const memolessIds = await fetchMemolessAssets()
+    replaceMemolessAssets(memolessIds)
+    console.log(`[Sync] Memoless assets synced: ${memolessIds.length} available`)
+  } catch (error) {
+    console.error('[Sync] Memoless asset sync failed:', error)
+  }
 }
 
 export function startPeriodicSync(): void {

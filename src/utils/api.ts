@@ -1,4 +1,4 @@
-import { QuoteResponse, TokenListItem } from '../types/context'
+import { MemolessAssetItem, QuoteResponse, TokenListItem } from '../types/context'
 
 const API_BASE = 'https://swap-api.unstoppable.money/v1'
 const SLIPPAGE = 1
@@ -83,4 +83,17 @@ export async function fetchQuote(params: QuoteParams): Promise<QuoteResponse> {
 
 export async function fetchAllTokens(): Promise<TokenListItem[]> {
   return apiRequest<TokenListItem[]>('/tokens/all')
+}
+
+// --- Memoless assets (no auth) ---
+
+const MEMOLESS_URL = 'https://swap.unstoppable.money/memoless/api/v1/assets'
+
+export async function fetchMemolessAssets(): Promise<string[]> {
+  const response = await fetch(MEMOLESS_URL)
+  if (!response.ok) {
+    throw new Error(`Memoless API error (${response.status})`)
+  }
+  const data = (await response.json()) as { success: boolean; assets: MemolessAssetItem[] }
+  return data.assets.filter(a => a.status === 'Available').map(a => a.asset)
 }
