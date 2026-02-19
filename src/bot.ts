@@ -4,6 +4,7 @@ import { SwapContext } from './types/context'
 import { swapWizard } from './scenes/swap'
 import { startPeriodicSync, stopPeriodicSync, syncTokens } from './services/token-sync'
 import { closeDb } from './db/database'
+import { s } from './config/strings'
 
 dotenv.config()
 
@@ -17,7 +18,8 @@ const bot = new Telegraf<SwapContext>(token)
 // Global error handler
 bot.catch((err, ctx) => {
   console.error('[Bot] Unhandled error:', err)
-  ctx.reply('❌ Something went wrong. Please try again with /swap.').catch(() => {})
+  const S = s(ctx.from?.language_code)
+  ctx.reply(S.botError).catch(() => {})
 })
 
 // Register scenes
@@ -31,8 +33,9 @@ bot.start(ctx => ctx.scene.enter('swap-wizard'))
 bot.command('swap', ctx => ctx.scene.enter('swap-wizard'))
 
 bot.command('cancel', ctx => {
+  const S = s(ctx.from?.language_code)
   ctx.scene.leave()
-  ctx.reply('🚫 Current operation cancelled.')
+  ctx.reply(S.botCancelReply)
 })
 
 // Startup
@@ -46,6 +49,9 @@ async function main() {
 
   // Set bot menu commands
   await bot.telegram.setMyCommands([{ command: 'swap', description: 'Start a new swap' }])
+  await bot.telegram.setMyCommands([{ command: 'swap', description: 'Начать новый обмен' }], {
+    language_code: 'ru'
+  })
 
   // Launch bot
   bot.launch()

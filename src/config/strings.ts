@@ -1,7 +1,9 @@
 // All user-visible text in one place.
 // Template placeholders use {name} syntax and are replaced at runtime.
 
-export const S = {
+import { ru } from './locales/ru'
+
+const en = {
   // --- General buttons ---
   back: '⬅️ Back',
   cancelSwap: '❌ Cancel Swap',
@@ -87,12 +89,24 @@ export const S = {
   assetNotFound: 'Asset not found',
   alreadySelected: 'Already selected as send asset',
 
+  // --- Bot-level messages ---
+  botError: '❌ Something went wrong. Please try again with /swap.',
+  botCancelReply: '🚫 Current operation cancelled.',
+
   // --- Progress lines ---
   progressSend: '✅ Send: *{asset}*',
   progressReceive: '✅ Receive: *{asset}*',
   progressAmount: '✅ Amount: *{amount} {asset}*',
   progressDestination: '✅ Destination: `{address}`',
   progressRefund: '✅ Refund: `{address}`'
+}
+
+export type Strings = { [K in keyof typeof en]: string }
+
+const locales: Record<string, Strings> = { en, ru }
+
+export function s(lang?: string): Strings {
+  return locales[lang ?? ''] ?? en
 }
 
 export function t(template: string, vars: Record<string, string | number>): string {

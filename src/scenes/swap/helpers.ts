@@ -1,16 +1,16 @@
 import { Markup } from 'telegraf'
-import { S, t } from '../../config/strings'
+import { Strings, t } from '../../config/strings'
 import { Asset, SwapContext, SwapSessionData } from '../../types/context'
 
-export const cancelButtonRow = [Markup.button.callback(S.cancelSwap, 'cancel_swap')]
-export const backCancelRow = [
-  Markup.button.callback(S.back, 'go_back'),
-  Markup.button.callback(S.cancelSwap, 'cancel_swap')
-]
-export const clearSearchCancelRow = [
-  Markup.button.callback(S.clearSearch, 'clear_search'),
-  Markup.button.callback(S.cancelSwap, 'cancel_swap')
-]
+export function cancelButtonRow(S: Strings) {
+  return [Markup.button.callback(S.cancelSwap, 'cancel_swap')]
+}
+export function backCancelRow(S: Strings) {
+  return [Markup.button.callback(S.back, 'go_back'), Markup.button.callback(S.cancelSwap, 'cancel_swap')]
+}
+export function clearSearchCancelRow(S: Strings) {
+  return [Markup.button.callback(S.clearSearch, 'clear_search'), Markup.button.callback(S.cancelSwap, 'cancel_swap')]
+}
 
 export const providerTitles: Record<string, string> = {
   THORCHAIN: 'THORChain',
@@ -41,7 +41,7 @@ export function assetCaption(asset: Asset) {
   return `${asset.ticker} (${label})`
 }
 
-export function assetKeyboard(assets: Asset[], disabledIdentifier?: string, showBack: boolean = false) {
+export function assetKeyboard(assets: Asset[], S: Strings, disabledIdentifier?: string, showBack: boolean = false) {
   const buttons = assets.map(a => {
     if (a.identifier === disabledIdentifier) {
       return Markup.button.callback(`✓ ${assetCaption(a)}`, 'disabled')
@@ -54,11 +54,11 @@ export function assetKeyboard(assets: Asset[], disabledIdentifier?: string, show
     rows.push(buttons.slice(i, i + 2))
   }
 
-  rows.push(showBack ? backCancelRow : cancelButtonRow)
+  rows.push(showBack ? backCancelRow(S) : cancelButtonRow(S))
   return Markup.inlineKeyboard(rows)
 }
 
-export function searchResultsKeyboard(assets: Asset[], disabledIdentifier?: string) {
+export function searchResultsKeyboard(assets: Asset[], S: Strings, disabledIdentifier?: string) {
   const buttons = assets.map((a, i) => {
     if (a.identifier === disabledIdentifier) {
       return Markup.button.callback(`✓ ${assetCaption(a)}`, 'disabled')
@@ -71,7 +71,7 @@ export function searchResultsKeyboard(assets: Asset[], disabledIdentifier?: stri
     rows.push(buttons.slice(i, i + 2))
   }
 
-  rows.push(clearSearchCancelRow)
+  rows.push(clearSearchCancelRow(S))
   return Markup.inlineKeyboard(rows)
 }
 
@@ -87,14 +87,14 @@ export function formatTime(seconds: number): string {
   return parts.join(' ')
 }
 
-export function buildProgress(s: SwapSessionData): string {
+export function buildProgress(session: SwapSessionData, S: Strings): string {
   const lines: string[] = []
-  if (s.assetIn) lines.push(t(S.progressSend, { asset: assetCaption(s.assetIn) }))
-  if (s.assetOut) lines.push(t(S.progressReceive, { asset: assetCaption(s.assetOut) }))
-  if (s.amount != null && s.assetIn)
-    lines.push(t(S.progressAmount, { amount: s.amount, asset: assetCaption(s.assetIn) }))
-  if (s.destinationAddress) lines.push(t(S.progressDestination, { address: s.destinationAddress }))
-  if (s.refundAddress) lines.push(t(S.progressRefund, { address: s.refundAddress }))
+  if (session.assetIn) lines.push(t(S.progressSend, { asset: assetCaption(session.assetIn) }))
+  if (session.assetOut) lines.push(t(S.progressReceive, { asset: assetCaption(session.assetOut) }))
+  if (session.amount != null && session.assetIn)
+    lines.push(t(S.progressAmount, { amount: session.amount, asset: assetCaption(session.assetIn) }))
+  if (session.destinationAddress) lines.push(t(S.progressDestination, { address: session.destinationAddress }))
+  if (session.refundAddress) lines.push(t(S.progressRefund, { address: session.refundAddress }))
   return lines.join('\n')
 }
 

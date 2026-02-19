@@ -1,7 +1,7 @@
 import { Markup, Scenes } from 'telegraf'
 import { message } from 'telegraf/filters'
 import { ALLOWED_PROVIDERS, FEATURED_IDENTIFIERS } from '../../config/assets'
-import { S, t } from '../../config/strings'
+import { s, t } from '../../config/strings'
 import { getAssetByIdentifier, getAssets, getProvidersForPair, searchAssets } from '../../db/tokens'
 import { SwapContext } from '../../types/context'
 import { fetchQuote } from '../../utils/api'
@@ -24,8 +24,9 @@ import {
 // --- Helpers ---
 
 async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
+  const S = s(ctx.from?.language_code)
   const { assetIn, assetOut, amount, destinationAddress } = ctx.scene.session
-  const progress = buildProgress(ctx.scene.session)
+  const progress = buildProgress(ctx.scene.session, S)
 
   const providers = getProvidersForPair(assetIn!.identifier, assetOut!.identifier).filter(p =>
     ALLOWED_PROVIDERS.includes(p)
@@ -77,7 +78,7 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
   for (let i = 0; i < routeButtons.length; i += 2) {
     buttonRows.push(routeButtons.slice(i, i + 2))
   }
-  buttonRows.push(backCancelRow)
+  buttonRows.push(backCancelRow(S))
 
   await editSwapMessage(
     ctx,
@@ -95,6 +96,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
   // Step 0: Send swap message with assetIn keyboard
   async ctx => {
+    const S = s(ctx.from?.language_code)
     ctx.scene.session.swapMessageId = undefined
     ctx.scene.session.assetIn = undefined
     ctx.scene.session.assetOut = undefined
@@ -113,7 +115,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
     const msg = await ctx.reply(S.selectSendAsset, {
       parse_mode: 'Markdown',
-      ...assetKeyboard(featuredAssets)
+      ...assetKeyboard(featuredAssets, S)
     })
 
     ctx.scene.session.swapMessageId = msg.message_id
@@ -123,6 +125,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
   // Step 1: Waiting for assetIn callback or search text
   async ctx => {
+    const S = s(ctx.from?.language_code)
     if (ctx.has(message('text'))) {
       await deleteUserMessage(ctx)
       if (ctx.message.text.trim().length < 2) return
@@ -130,11 +133,11 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
       ctx.scene.session.searchResults = results
       if (results.length > 0) {
         await editSwapMessage(ctx, S.selectSendAsset, {
-          ...searchResultsKeyboard(results)
+          ...searchResultsKeyboard(results, S)
         })
       } else {
         await editSwapMessage(ctx, t(S.searchNoResults, { progress: '' }), {
-          ...Markup.inlineKeyboard([clearSearchCancelRow])
+          ...Markup.inlineKeyboard([clearSearchCancelRow(S)])
         })
       }
       return
@@ -144,19 +147,20 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
   // Step 2: Waiting for assetOut callback or search text
   async ctx => {
+    const S = s(ctx.from?.language_code)
     if (ctx.has(message('text'))) {
       await deleteUserMessage(ctx)
       if (ctx.message.text.trim().length < 2) return
       const results = searchAssets(ctx.message.text)
       ctx.scene.session.searchResults = results
-      const progress = buildProgress(ctx.scene.session)
+      const progress = buildProgress(ctx.scene.session, S)
       if (results.length > 0) {
         await editSwapMessage(ctx, t(S.selectReceiveAsset, { progress }), {
-          ...searchResultsKeyboard(results, ctx.scene.session.assetIn?.identifier)
+          ...searchResultsKeyboard(results, S, ctx.scene.session.assetIn?.identifier)
         })
       } else {
         await editSwapMessage(ctx, t(S.searchNoResults, { progress }), {
-          ...Markup.inlineKeyboard([clearSearchCancelRow])
+          ...Markup.inlineKeyboard([clearSearchCancelRow(S)])
         })
       }
       return
@@ -168,25 +172,26 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
   async ctx => {
     if (!ctx.has(message('text'))) return
 
+    const S = s(ctx.from?.language_code)
     await deleteUserMessage(ctx)
 
     const amount = parseFloat(ctx.message.text)
     const asset = assetCaption(ctx.scene.session.assetIn!)
 
     if (isNaN(amount) || amount <= 0) {
-      const progress = buildProgress(ctx.scene.session)
+      const progress = buildProgress(ctx.scene.session, S)
       await editSwapMessage(ctx, t(S.invalidAmount, { progress, asset }), {
-        ...Markup.inlineKeyboard([backCancelRow])
+        ...Markup.inlineKeyboard([backCancelRow(S)])
       })
       return
     }
 
     ctx.scene.session.amount = amount
 
-    const progress = buildProgress(ctx.scene.session)
+    const progress = buildProgress(ctx.scene.session, S)
     const outAsset = assetCaption(ctx.scene.session.assetOut!)
     await editSwapMessage(ctx, t(S.enterDestination, { progress, asset: outAsset }), {
-      ...Markup.inlineKeyboard([backCancelRow])
+      ...Markup.inlineKeyboard([backCancelRow(S)])
     })
 
     return ctx.wizard.next()
@@ -196,6 +201,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
   async ctx => {
     if (!ctx.has(message('text'))) return
 
+    const S = s(ctx.from?.language_code)
     await deleteUserMessage(ctx)
 
     const address = ctx.message.text.trim()
@@ -203,19 +209,19 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
     const addressError = validateAddress(ctx.scene.session.assetOut!.identifier, address)
     if (addressError) {
-      const progress = buildProgress(ctx.scene.session)
+      const progress = buildProgress(ctx.scene.session, S)
       await editSwapMessage(ctx, t(S.invalidDestination, { progress, asset, hint: addressError }), {
-        ...Markup.inlineKeyboard([backCancelRow])
+        ...Markup.inlineKeyboard([backCancelRow(S)])
       })
       return
     }
 
     ctx.scene.session.destinationAddress = address
 
-    const progress = buildProgress(ctx.scene.session)
+    const progress = buildProgress(ctx.scene.session, S)
     const inAsset = assetCaption(ctx.scene.session.assetIn!)
     await editSwapMessage(ctx, t(S.enterRefund, { progress, asset: inAsset }), {
-      ...Markup.inlineKeyboard([backCancelRow])
+      ...Markup.inlineKeyboard([backCancelRow(S)])
     })
 
     return ctx.wizard.next()
@@ -225,6 +231,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
   async ctx => {
     if (!ctx.has(message('text'))) return
 
+    const S = s(ctx.from?.language_code)
     await deleteUserMessage(ctx)
 
     const refundAddress = ctx.message.text.trim()
@@ -232,9 +239,9 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
     const refundError = validateAddress(ctx.scene.session.assetIn!.identifier, refundAddress)
     if (refundError) {
-      const progress = buildProgress(ctx.scene.session)
+      const progress = buildProgress(ctx.scene.session, S)
       await editSwapMessage(ctx, t(S.invalidRefund, { progress, asset: inAsset, hint: refundError }), {
-        ...Markup.inlineKeyboard([backCancelRow])
+        ...Markup.inlineKeyboard([backCancelRow(S)])
       })
       return
     }
@@ -248,7 +255,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : 'Unknown error'
       console.error('[Swap] Quote error:', error)
-      const progress = buildProgress(ctx.scene.session)
+      const progress = buildProgress(ctx.scene.session, S)
       await editSwapMessage(ctx, t(S.quoteError, { progress, error: errMsg }))
       return ctx.scene.leave()
     }
@@ -267,6 +274,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
 // --- /cancel command inside wizard ---
 swapWizard.command('cancel', async ctx => {
+  const S = s(ctx.from?.language_code)
   await deleteUserMessage(ctx)
   await editSwapMessage(ctx, S.swapCancelled)
   return ctx.scene.leave()
@@ -276,6 +284,7 @@ swapWizard.command('cancel', async ctx => {
 
 // AssetIn / AssetOut selection
 swapWizard.action(/^select_(.+)$/, async ctx => {
+  const S = s(ctx.from?.language_code)
   if (ctx.wizard.cursor === 1) {
     const identifier = ctx.match[1]
     const asset = getAssetByIdentifier(identifier)
@@ -290,10 +299,10 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
 
     const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
 
-    const progress = buildProgress(ctx.scene.session)
+    const progress = buildProgress(ctx.scene.session, S)
     await ctx.editMessageText(t(S.selectReceiveAsset, { progress }), {
       parse_mode: 'Markdown',
-      ...assetKeyboard(featuredAssets, asset.identifier, true)
+      ...assetKeyboard(featuredAssets, S, asset.identifier, true)
     })
 
     return ctx.wizard.next()
@@ -311,10 +320,10 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
     ctx.scene.session.assetOut = asset
     await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
 
-    const progress = buildProgress(ctx.scene.session)
+    const progress = buildProgress(ctx.scene.session, S)
     await ctx.editMessageText(t(S.enterAmount, { progress, asset: assetCaption(ctx.scene.session.assetIn!) }), {
       parse_mode: 'Markdown',
-      ...Markup.inlineKeyboard([backCancelRow])
+      ...Markup.inlineKeyboard([backCancelRow(S)])
     })
 
     return ctx.wizard.next()
@@ -323,6 +332,7 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
 
 // Search result selection (index-based to avoid callback data length limits)
 swapWizard.action(/^sselect_(\d+)$/, async ctx => {
+  const S = s(ctx.from?.language_code)
   const index = parseInt(ctx.match[1], 10)
   const results = ctx.scene.session.searchResults
   if (!results || !results[index]) {
@@ -337,10 +347,10 @@ swapWizard.action(/^sselect_(\d+)$/, async ctx => {
     await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
 
     const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
-    const progress = buildProgress(ctx.scene.session)
+    const progress = buildProgress(ctx.scene.session, S)
     await ctx.editMessageText(t(S.selectReceiveAsset, { progress }), {
       parse_mode: 'Markdown',
-      ...assetKeyboard(featuredAssets, asset.identifier, true)
+      ...assetKeyboard(featuredAssets, S, asset.identifier, true)
     })
 
     return ctx.wizard.next()
@@ -351,10 +361,10 @@ swapWizard.action(/^sselect_(\d+)$/, async ctx => {
     ctx.scene.session.searchResults = undefined
     await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
 
-    const progress = buildProgress(ctx.scene.session)
+    const progress = buildProgress(ctx.scene.session, S)
     await ctx.editMessageText(t(S.enterAmount, { progress, asset: assetCaption(ctx.scene.session.assetIn!) }), {
       parse_mode: 'Markdown',
-      ...Markup.inlineKeyboard([backCancelRow])
+      ...Markup.inlineKeyboard([backCancelRow(S)])
     })
 
     return ctx.wizard.next()
@@ -363,6 +373,7 @@ swapWizard.action(/^sselect_(\d+)$/, async ctx => {
 
 // Route selection
 swapWizard.action(/^route_(\d+)$/, async ctx => {
+  const S = s(ctx.from?.language_code)
   const index = parseInt(ctx.match[1], 10)
   const { routes, assetIn, assetOut, amount, destinationAddress, refundAddress } = ctx.scene.session
 
@@ -390,7 +401,7 @@ swapWizard.action(/^route_(\d+)$/, async ctx => {
     }),
     {
       parse_mode: 'Markdown',
-      ...Markup.inlineKeyboard([[Markup.button.callback(S.confirmButton, 'confirm_swap')], backCancelRow])
+      ...Markup.inlineKeyboard([[Markup.button.callback(S.confirmButton, 'confirm_swap')], backCancelRow(S)])
     }
   )
 
@@ -399,6 +410,7 @@ swapWizard.action(/^route_(\d+)$/, async ctx => {
 
 // Confirm swap — call API with dry: false
 swapWizard.action('confirm_swap', async ctx => {
+  const S = s(ctx.from?.language_code)
   const { assetIn, assetOut, amount, destinationAddress, refundAddress, quote } = ctx.scene.session
 
   if (!assetIn || !assetOut || !amount || !destinationAddress || !refundAddress || !quote) {
@@ -517,6 +529,7 @@ swapWizard.action('confirm_swap', async ctx => {
 
 // Back button
 swapWizard.action('go_back', async ctx => {
+  const S = s(ctx.from?.language_code)
   await ctx.answerCbQuery()
   const cursor = ctx.wizard.cursor
 
@@ -527,7 +540,7 @@ swapWizard.action('go_back', async ctx => {
       const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
       await ctx.editMessageText(S.selectSendAsset, {
         parse_mode: 'Markdown',
-        ...assetKeyboard(featuredAssets)
+        ...assetKeyboard(featuredAssets, S)
       })
       ctx.wizard.selectStep(1)
       break
@@ -536,10 +549,10 @@ swapWizard.action('go_back', async ctx => {
       // At amount input → back to assetOut
       ctx.scene.session.assetOut = undefined
       const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
-      const progress = buildProgress(ctx.scene.session)
+      const progress = buildProgress(ctx.scene.session, S)
       await ctx.editMessageText(t(S.selectReceiveAsset, { progress }), {
         parse_mode: 'Markdown',
-        ...assetKeyboard(featuredAssets, ctx.scene.session.assetIn!.identifier, true)
+        ...assetKeyboard(featuredAssets, S, ctx.scene.session.assetIn!.identifier, true)
       })
       ctx.wizard.selectStep(2)
       break
@@ -547,10 +560,10 @@ swapWizard.action('go_back', async ctx => {
     case 4: {
       // At destination input → back to amount
       ctx.scene.session.amount = undefined
-      const progress = buildProgress(ctx.scene.session)
+      const progress = buildProgress(ctx.scene.session, S)
       await ctx.editMessageText(t(S.enterAmount, { progress, asset: assetCaption(ctx.scene.session.assetIn!) }), {
         parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([backCancelRow])
+        ...Markup.inlineKeyboard([backCancelRow(S)])
       })
       ctx.wizard.selectStep(3)
       break
@@ -558,11 +571,11 @@ swapWizard.action('go_back', async ctx => {
     case 5: {
       // At refund input → back to destination
       ctx.scene.session.destinationAddress = undefined
-      const progress = buildProgress(ctx.scene.session)
+      const progress = buildProgress(ctx.scene.session, S)
       const outAsset = assetCaption(ctx.scene.session.assetOut!)
       await ctx.editMessageText(t(S.enterDestination, { progress, asset: outAsset }), {
         parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([backCancelRow])
+        ...Markup.inlineKeyboard([backCancelRow(S)])
       })
       ctx.wizard.selectStep(4)
       break
@@ -571,11 +584,11 @@ swapWizard.action('go_back', async ctx => {
       // At route selection → back to refund
       ctx.scene.session.refundAddress = undefined
       ctx.scene.session.routes = undefined
-      const progress = buildProgress(ctx.scene.session)
+      const progress = buildProgress(ctx.scene.session, S)
       const inAsset = assetCaption(ctx.scene.session.assetIn!)
       await ctx.editMessageText(t(S.enterRefund, { progress, asset: inAsset }), {
         parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([backCancelRow])
+        ...Markup.inlineKeyboard([backCancelRow(S)])
       })
       ctx.wizard.selectStep(5)
       break
@@ -591,7 +604,7 @@ swapWizard.action('go_back', async ctx => {
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : 'Unknown error'
         console.error('[Swap] Quote error:', error)
-        const progress = buildProgress(ctx.scene.session)
+        const progress = buildProgress(ctx.scene.session, S)
         await editSwapMessage(ctx, t(S.quoteError, { progress, error: errMsg }))
         return ctx.scene.leave()
       }
@@ -602,6 +615,7 @@ swapWizard.action('go_back', async ctx => {
 
 // Clear search — return to featured list
 swapWizard.action('clear_search', async ctx => {
+  const S = s(ctx.from?.language_code)
   await ctx.answerCbQuery()
   ctx.scene.session.searchResults = undefined
   const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
@@ -609,24 +623,26 @@ swapWizard.action('clear_search', async ctx => {
   if (ctx.wizard.cursor === 1) {
     await ctx.editMessageText(S.selectSendAsset, {
       parse_mode: 'Markdown',
-      ...assetKeyboard(featuredAssets)
+      ...assetKeyboard(featuredAssets, S)
     })
   } else if (ctx.wizard.cursor === 2) {
-    const progress = buildProgress(ctx.scene.session)
+    const progress = buildProgress(ctx.scene.session, S)
     await ctx.editMessageText(t(S.selectReceiveAsset, { progress }), {
       parse_mode: 'Markdown',
-      ...assetKeyboard(featuredAssets, ctx.scene.session.assetIn?.identifier, true)
+      ...assetKeyboard(featuredAssets, S, ctx.scene.session.assetIn?.identifier, true)
     })
   }
 })
 
 // Disabled button (already selected asset)
 swapWizard.action('disabled', async ctx => {
+  const S = s(ctx.from?.language_code)
   await ctx.answerCbQuery(S.alreadySelected)
 })
 
 // Cancel swap (inline button)
 swapWizard.action('cancel_swap', async ctx => {
+  const S = s(ctx.from?.language_code)
   await ctx.answerCbQuery(S.swapCancelled)
   await ctx.editMessageText(S.swapCancelled)
   return ctx.scene.leave()
