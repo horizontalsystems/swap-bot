@@ -52,6 +52,12 @@ async function main() {
   await bot.telegram.setMyCommands([{ command: 'swap', description: 'Начать новый обмен' }], {
     language_code: 'ru'
   })
+  await bot.telegram.setMyCommands([{ command: 'swap', description: '开始新兑换' }], {
+    language_code: 'zh'
+  })
+  await bot.telegram.setMyCommands([{ command: 'swap', description: 'شروع تبادل جدید' }], {
+    language_code: 'fa'
+  })
 
   // Launch bot
   bot.launch()
