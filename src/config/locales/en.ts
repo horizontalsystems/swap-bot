@@ -83,6 +83,7 @@ export const en = {
   processingSwap: 'Processing swap...',
   assetNotFound: 'Asset not found',
   alreadySelected: 'Already selected as send asset',
+  openInWallet: '💳 Open in Wallet',
 
   // --- Bot-level messages ---
   botError: '❌ Something went wrong. Please try again with /swap.',

@@ -82,6 +82,7 @@ export const zh: Strings = {
   processingSwap: '正在处理兑换...',
   assetNotFound: '未找到资产',
   alreadySelected: '已选为发送资产',
+  openInWallet: '💳 在钱包中打开',
 
   // --- Bot-level messages ---
   botError: '❌ 出了点问题。请使用 /swap 重试。',

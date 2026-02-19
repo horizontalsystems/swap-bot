@@ -23,13 +23,11 @@ export const fa: Strings = {
 
   // --- Step 4: Destination address ---
   enterDestination: '🔄 *تبادل*\n\n{progress}\n\n📍 آدرس مقصد *{asset}* را وارد کنید:',
-  invalidDestination:
-    '🔄 *تبادل*\n\n{progress}\n\n⚠️ آدرس نامعتبر است. {hint}\n\n📍 آدرس مقصد *{asset}* را وارد کنید:',
+  invalidDestination: '🔄 *تبادل*\n\n{progress}\n\n⚠️ آدرس نامعتبر است. {hint}\n\n📍 آدرس مقصد *{asset}* را وارد کنید:',
 
   // --- Step 5: Refund address ---
   enterRefund: '🔄 *تبادل*\n\n{progress}\n\n🔙 آدرس بازگشت *{asset}* را وارد کنید:',
-  invalidRefund:
-    '🔄 *تبادل*\n\n{progress}\n\n⚠️ آدرس نامعتبر است. {hint}\n\n🔙 آدرس بازگشت *{asset}* را وارد کنید:',
+  invalidRefund: '🔄 *تبادل*\n\n{progress}\n\n⚠️ آدرس نامعتبر است. {hint}\n\n🔙 آدرس بازگشت *{asset}* را وارد کنید:',
 
   // --- Quotes ---
   fetchingQuotes: '🔄 *تبادل*\n\n{progress}\n\n⏳ در حال دریافت قیمت‌ها...',
@@ -86,6 +84,7 @@ export const fa: Strings = {
   processingSwap: 'در حال پردازش تبادل...',
   assetNotFound: 'دارایی یافت نشد',
   alreadySelected: 'قبلاً به عنوان دارایی ارسال انتخاب شده',
+  openInWallet: '💳 باز کردن در کیف پول',
 
   // --- Bot-level messages ---
   botError: '❌ مشکلی پیش آمد. لطفاً دوباره با /swap تلاش کنید.',

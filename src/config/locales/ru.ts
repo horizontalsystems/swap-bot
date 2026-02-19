@@ -84,6 +84,7 @@ export const ru: Strings = {
   processingSwap: 'Обработка обмена...',
   assetNotFound: 'Актив не найден',
   alreadySelected: 'Уже выбран как актив отправки',
+  openInWallet: '💳 Открыть в кошельке',
 
   // --- Bot-level messages ---
   botError: '❌ Что-то пошло не так. Попробуйте снова с /swap.',

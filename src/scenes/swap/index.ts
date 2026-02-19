@@ -7,6 +7,7 @@ import { SwapContext } from '../../types/context'
 import { fetchQuote } from '../../utils/api'
 import { preflightMemoless, registerMemoless } from '../../utils/memoless-api'
 import { validateAddress } from '../../utils/addressValidator'
+import { buildPaymentUri } from '../../utils/paymentUri'
 import {
   assetCaption,
   assetKeyboard,
@@ -515,14 +516,22 @@ swapWizard.action('confirm_swap', async ctx => {
       expiration: expiresIn != null ? formatTime(expiresIn) : 'N/A'
     })
 
+    const paymentUri = buildPaymentUri(assetIn.chain, inboundAddr!, sendAmount, assetIn.address)
+    const fullCaption = paymentUri ? caption + `\n\n${S.openInWallet}:\n\`${paymentUri}\`` : caption
+
     await deleteSwapMessage(ctx)
-    await ctx.replyWithPhoto({ source: qrBuffer }, { caption, parse_mode: 'Markdown' })
+    await ctx.replyWithPhoto({ source: qrBuffer }, { caption: fullCaption, parse_mode: 'Markdown' })
 
     return ctx.scene.leave()
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error'
     console.error('[Swap] Confirm error:', error)
-    await ctx.editMessageText(t(S.swapConfirmError, { error: errMsg }))
+    try {
+      await ctx.editMessageText(t(S.swapConfirmError, { error: errMsg }))
+    } catch {
+      // Swap message already deleted — send as new message
+      await ctx.reply(t(S.swapConfirmError, { error: errMsg }))
+    }
     return ctx.scene.leave()
   }
 })
