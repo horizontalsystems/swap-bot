@@ -58,9 +58,16 @@ export interface QuoteRoute {
   qrCodeDataURL?: string
 }
 
+export interface ProviderError {
+  provider: string
+  error: string
+  errorCode?: string
+  minimumAmount?: number
+}
+
 export interface QuoteResponse {
   routes: QuoteRoute[]
-  providerErrors: unknown[]
+  providerErrors: ProviderError[]
 }
 
 // --- Session / Context ---

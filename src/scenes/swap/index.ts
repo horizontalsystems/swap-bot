@@ -48,7 +48,11 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
   })
 
   if (!quoteResponse.routes || quoteResponse.routes.length === 0) {
-    await editSwapMessage(ctx, t(S.noRoutes, { progress }))
+    if (quoteResponse.providerErrors && quoteResponse.providerErrors.length > 0) {
+      await editSwapMessage(ctx, t(S.allProvidersFailed, { progress }))
+    } else {
+      await editSwapMessage(ctx, t(S.noRoutes, { progress }))
+    }
     return false
   }
 

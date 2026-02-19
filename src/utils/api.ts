@@ -77,11 +77,28 @@ export async function fetchQuote(params: QuoteParams): Promise<QuoteResponse> {
 
   console.log('[API] Requesting quote:', JSON.stringify(body, null, 2))
 
-  return apiRequest<QuoteResponse>('/quote', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  })
+  try {
+    return await apiRequest<QuoteResponse>('/quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+  } catch (error) {
+    // 404 means all providers failed — parse provider errors instead of throwing raw response
+    if (error instanceof Error && error.message.includes('API error (404)')) {
+      const jsonStart = error.message.indexOf('{')
+      if (jsonStart !== -1) {
+        try {
+          const parsed = JSON.parse(error.message.slice(jsonStart))
+          const providerErrors = Array.isArray(parsed.providerErrors) ? parsed.providerErrors : []
+          return { routes: [], providerErrors }
+        } catch {
+          /* fall through */
+        }
+      }
+    }
+    throw error
+  }
 }
 
 // --- Tokens ---

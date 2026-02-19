@@ -35,6 +35,8 @@ export const S = {
   fetchingQuotes: '🔄 *Swap*\n\n{progress}\n\n⏳ Fetching quotes...',
   noProviders: '🔄 *Swap*\n\n{progress}\n\n❌ No providers support this pair.',
   noRoutes: '🔄 *Swap*\n\n{progress}\n\n❌ No swap routes available for this pair.',
+  allProvidersFailed:
+    '🔄 *Swap*\n\n{progress}\n\n❌ No providers could fulfill this swap. Try a different amount or pair.',
   quotesHeader: '🔄 *Swap*\n\n{progress}\n\n📊 *Quotes* ({count}):\n\n{routes}\n\n',
   quoteLine: '*{index}.* {provider}\n    {amount} {ticker}  ·  {time}',
   quoteError: '🔄 *Swap*\n\n{progress}\n\n❌ Failed to fetch quote: {error}',
