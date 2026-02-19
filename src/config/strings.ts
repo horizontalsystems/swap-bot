@@ -6,12 +6,16 @@ export const S = {
   back: '⬅️ Back',
   cancelSwap: '❌ Cancel Swap',
 
+  // --- Search ---
+  clearSearch: '📋 Clear search',
+  searchNoResults: '🔄 *Swap*\n\n{progress}❌ No assets found. Try a different query.',
+
   // --- Step 0: Select send asset ---
   noAssetsAvailable: '⚠️ No assets available yet. Token lists may still be loading. Please try again later.',
-  selectSendAsset: '🔄 *Swap*\n\nSelect the asset you want to *send*:',
+  selectSendAsset: '🔄 *Swap*\n\nSelect the asset you want to *send* or type to search:',
 
   // --- Step 1: Select receive asset ---
-  selectReceiveAsset: '🔄 *Swap*\n\n{progress}\n\nSelect the asset you want to *receive*:',
+  selectReceiveAsset: '🔄 *Swap*\n\n{progress}\n\nSelect the asset you want to *receive* or type to search:',
 
   // --- Step 3: Enter amount ---
   enterAmount: '🔄 *Swap*\n\n{progress}\n\n💰 Enter the amount of *{asset}* you want to swap:',

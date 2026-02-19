@@ -13,7 +13,16 @@ export async function syncTokens(): Promise<void> {
 
   console.log(`COUNT: ${tokens.length}`)
 
-  upsertTokens(tokens.map(t => ({ identifier: t.identifier, name: t.name, providers: t.providers })))
+  upsertTokens(
+    tokens.map(t => ({
+      identifier: t.identifier,
+      name: t.name,
+      ticker: t.ticker as string | undefined,
+      chain: t.chain as string | undefined,
+      address: t.address as string | null | undefined,
+      providers: t.providers
+    }))
+  )
 
   console.log(`[Sync] Sync complete. Total tokens in DB: ${getTokenCount()}`)
 

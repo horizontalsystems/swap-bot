@@ -21,6 +21,9 @@ export interface MemolessAssetItem {
 export interface Asset {
   identifier: string // e.g. "BTC.BTC", "ETH.ETH"
   name: string // e.g. "Bitcoin", "Ethereum"
+  ticker: string // e.g. "BTC", "USDT"
+  chain: string // e.g. "BTC", "ETH"
+  address: string | null // contract address, null for native tokens
 }
 
 // --- Quote types ---
@@ -71,6 +74,7 @@ export interface SwapSessionData extends Scenes.WizardSessionData {
   refundAddress?: string
   routes?: QuoteRoute[]
   quote?: QuoteRoute
+  searchResults?: Asset[]
 }
 
 export interface SwapContext extends Context {

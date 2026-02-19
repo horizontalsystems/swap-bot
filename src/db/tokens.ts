@@ -2,20 +2,56 @@ import { Asset } from '../types/context'
 import { getDb } from './database'
 import { areMemolessAssets } from './memoless'
 
+type TokenRow = {
+  identifier: string
+  name: string | null
+  ticker: string | null
+  chain: string | null
+  address: string | null
+}
+
+function rowToAsset(r: TokenRow): Asset {
+  return {
+    identifier: r.identifier,
+    name: r.name ?? r.identifier,
+    ticker: r.ticker ?? r.identifier.split('.')[1]?.split('-')[0] ?? r.identifier,
+    chain: r.chain ?? r.identifier.split('.')[0] ?? '',
+    address: r.address ?? null
+  }
+}
+
 // --- Token operations ---
 
-export function upsertTokens(tokens: { identifier: string; name?: string; providers?: string[] }[]): void {
+export function upsertTokens(
+  tokens: {
+    identifier: string
+    name?: string
+    ticker?: string
+    chain?: string
+    address?: string | null
+    providers?: string[]
+  }[]
+): void {
   const database = getDb()
 
   const stmt = database.prepare(`
-    INSERT INTO tokens (identifier, name, providers)
-    VALUES (?, ?, ?)
-    ON CONFLICT(identifier) DO UPDATE SET name = excluded.name, providers = excluded.providers
+    INSERT INTO tokens (identifier, name, ticker, chain, address, providers)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(identifier) DO UPDATE SET
+      name = excluded.name, ticker = excluded.ticker, chain = excluded.chain,
+      address = excluded.address, providers = excluded.providers
   `)
 
   const transaction = database.transaction(() => {
     for (const token of tokens) {
-      stmt.run(token.identifier, token.name ?? null, token.providers ? JSON.stringify(token.providers) : null)
+      stmt.run(
+        token.identifier,
+        token.name ?? null,
+        token.ticker ?? null,
+        token.chain ?? null,
+        token.address ?? null,
+        token.providers ? JSON.stringify(token.providers) : null
+      )
     }
   })
 
@@ -30,14 +66,14 @@ export function getAssets(identifiers: string[]): Asset[] {
   const database = getDb()
   const placeholders = identifiers.map(() => '?').join(', ')
   const rows = database
-    .prepare(`SELECT identifier, name FROM tokens WHERE identifier IN (${placeholders})`)
-    .all(...identifiers) as { identifier: string; name: string | null }[]
+    .prepare(`SELECT identifier, name, ticker, chain, address FROM tokens WHERE identifier IN (${placeholders})`)
+    .all(...identifiers) as TokenRow[]
 
   const byId = new Map(rows.map(r => [r.identifier, r]))
   return identifiers
     .map(id => byId.get(id))
     .filter((r): r is NonNullable<typeof r> => r != null)
-    .map(r => ({ identifier: r.identifier, name: r.name ?? r.identifier }))
+    .map(rowToAsset)
 }
 
 /**
@@ -45,11 +81,11 @@ export function getAssets(identifiers: string[]): Asset[] {
  */
 export function getAssetByIdentifier(identifier: string): Asset | null {
   const database = getDb()
-  const row = database.prepare('SELECT identifier, name FROM tokens WHERE identifier = ?').get(identifier) as
-    | { identifier: string; name: string | null }
-    | undefined
+  const row = database
+    .prepare('SELECT identifier, name, ticker, chain, address FROM tokens WHERE identifier = ?')
+    .get(identifier) as TokenRow | undefined
   if (!row) return null
-  return { identifier: row.identifier, name: row.name ?? row.identifier }
+  return rowToAsset(row)
 }
 
 /**
@@ -59,6 +95,32 @@ export function getTokenCount(): number {
   const database = getDb()
   const row = database.prepare('SELECT COUNT(*) as count FROM tokens').get() as { count: number }
   return row.count
+}
+
+/**
+ * Search tokens by ticker and name (case-insensitive).
+ * Results ordered: exact ticker match, ticker starts with, ticker contains, name contains.
+ */
+export function searchAssets(query: string, limit: number = 20): Asset[] {
+  const database = getDb()
+  const startsWith = `${query}%`
+  const contains = `%${query}%`
+  const rows = database
+    .prepare(
+      `SELECT identifier, name, ticker, chain, address,
+        CASE
+          WHEN ticker LIKE ? COLLATE NOCASE THEN 0
+          WHEN ticker LIKE ? COLLATE NOCASE THEN 1
+          WHEN ticker LIKE ? COLLATE NOCASE THEN 2
+          ELSE 3
+        END AS rank
+      FROM tokens
+      WHERE ticker LIKE ? COLLATE NOCASE OR name LIKE ? COLLATE NOCASE
+      ORDER BY rank, ticker COLLATE NOCASE
+      LIMIT ?`
+    )
+    .all(query, startsWith, contains, contains, contains, limit) as (TokenRow & { rank: number })[]
+  return rows.map(rowToAsset)
 }
 
 /**

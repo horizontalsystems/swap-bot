@@ -2,7 +2,7 @@ import { Markup, Scenes } from 'telegraf'
 import { message } from 'telegraf/filters'
 import { ALLOWED_PROVIDERS, FEATURED_IDENTIFIERS } from '../../config/assets'
 import { S, t } from '../../config/strings'
-import { getAssetByIdentifier, getAssets, getProvidersForPair } from '../../db/tokens'
+import { getAssetByIdentifier, getAssets, getProvidersForPair, searchAssets } from '../../db/tokens'
 import { SwapContext } from '../../types/context'
 import { fetchQuote } from '../../utils/api'
 import { preflightMemoless, registerMemoless } from '../../utils/memoless-api'
@@ -12,11 +12,13 @@ import {
   assetKeyboard,
   backCancelRow,
   buildProgress,
+  clearSearchCancelRow,
   deleteSwapMessage,
   deleteUserMessage,
   editSwapMessage,
   formatTime,
-  providerName
+  providerName,
+  searchResultsKeyboard
 } from './helpers'
 
 // --- Helpers ---
@@ -53,13 +55,12 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
   quoteResponse.routes.sort((a, b) => parseFloat(b.expectedBuyAmount) - parseFloat(a.expectedBuyAmount))
   ctx.scene.session.routes = quoteResponse.routes
 
-  const outTicker = assetCaption(assetOut!, false)
   const routeLines = quoteResponse.routes.map((route, i) => {
     return t(S.quoteLine, {
       index: i + 1,
       provider: providerName(route.providers[0]),
       amount: route.expectedBuyAmount,
-      ticker: outTicker,
+      ticker: assetOut!.ticker,
       time: formatTime(route.estimatedTime.total)
     })
   })
@@ -116,13 +117,46 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     return ctx.wizard.next()
   },
 
-  // Step 1: Waiting for assetIn callback
+  // Step 1: Waiting for assetIn callback or search text
   async ctx => {
+    if (ctx.has(message('text'))) {
+      await deleteUserMessage(ctx)
+      if (ctx.message.text.trim().length < 2) return
+      const results = searchAssets(ctx.message.text)
+      ctx.scene.session.searchResults = results
+      if (results.length > 0) {
+        await editSwapMessage(ctx, S.selectSendAsset, {
+          ...searchResultsKeyboard(results)
+        })
+      } else {
+        await editSwapMessage(ctx, t(S.searchNoResults, { progress: '' }), {
+          ...Markup.inlineKeyboard([clearSearchCancelRow])
+        })
+      }
+      return
+    }
     await deleteUserMessage(ctx)
   },
 
-  // Step 2: Waiting for assetOut callback
+  // Step 2: Waiting for assetOut callback or search text
   async ctx => {
+    if (ctx.has(message('text'))) {
+      await deleteUserMessage(ctx)
+      if (ctx.message.text.trim().length < 2) return
+      const results = searchAssets(ctx.message.text)
+      ctx.scene.session.searchResults = results
+      const progress = buildProgress(ctx.scene.session)
+      if (results.length > 0) {
+        await editSwapMessage(ctx, t(S.selectReceiveAsset, { progress }), {
+          ...searchResultsKeyboard(results, ctx.scene.session.assetIn?.identifier)
+        })
+      } else {
+        await editSwapMessage(ctx, t(S.searchNoResults, { progress }), {
+          ...Markup.inlineKeyboard([clearSearchCancelRow])
+        })
+      }
+      return
+    }
     await deleteUserMessage(ctx)
   },
 
@@ -271,6 +305,46 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
     }
 
     ctx.scene.session.assetOut = asset
+    await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
+
+    const progress = buildProgress(ctx.scene.session)
+    await ctx.editMessageText(t(S.enterAmount, { progress, asset: assetCaption(ctx.scene.session.assetIn!) }), {
+      parse_mode: 'Markdown',
+      ...Markup.inlineKeyboard([backCancelRow])
+    })
+
+    return ctx.wizard.next()
+  }
+})
+
+// Search result selection (index-based to avoid callback data length limits)
+swapWizard.action(/^sselect_(\d+)$/, async ctx => {
+  const index = parseInt(ctx.match[1], 10)
+  const results = ctx.scene.session.searchResults
+  if (!results || !results[index]) {
+    await ctx.answerCbQuery(S.assetNotFound)
+    return
+  }
+  const asset = results[index]
+
+  if (ctx.wizard.cursor === 1) {
+    ctx.scene.session.assetIn = asset
+    ctx.scene.session.searchResults = undefined
+    await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
+
+    const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
+    const progress = buildProgress(ctx.scene.session)
+    await ctx.editMessageText(t(S.selectReceiveAsset, { progress }), {
+      parse_mode: 'Markdown',
+      ...assetKeyboard(featuredAssets, asset.identifier, true)
+    })
+
+    return ctx.wizard.next()
+  }
+
+  if (ctx.wizard.cursor === 2) {
+    ctx.scene.session.assetOut = asset
+    ctx.scene.session.searchResults = undefined
     await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
 
     const progress = buildProgress(ctx.scene.session)
@@ -519,6 +593,26 @@ swapWizard.action('go_back', async ctx => {
       }
       break
     }
+  }
+})
+
+// Clear search — return to featured list
+swapWizard.action('clear_search', async ctx => {
+  await ctx.answerCbQuery()
+  ctx.scene.session.searchResults = undefined
+  const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
+
+  if (ctx.wizard.cursor === 1) {
+    await ctx.editMessageText(S.selectSendAsset, {
+      parse_mode: 'Markdown',
+      ...assetKeyboard(featuredAssets)
+    })
+  } else if (ctx.wizard.cursor === 2) {
+    const progress = buildProgress(ctx.scene.session)
+    await ctx.editMessageText(t(S.selectReceiveAsset, { progress }), {
+      parse_mode: 'Markdown',
+      ...assetKeyboard(featuredAssets, ctx.scene.session.assetIn?.identifier, true)
+    })
   }
 })
 

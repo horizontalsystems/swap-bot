@@ -25,6 +25,9 @@ function initSchema(): void {
     CREATE TABLE tokens (
       identifier TEXT PRIMARY KEY,
       name TEXT,
+      ticker TEXT,
+      chain TEXT,
+      address TEXT,
       providers TEXT
     );
   `)

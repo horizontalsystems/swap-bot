@@ -7,6 +7,10 @@ export const backCancelRow = [
   Markup.button.callback(S.back, 'go_back'),
   Markup.button.callback(S.cancelSwap, 'cancel_swap')
 ]
+export const clearSearchCancelRow = [
+  Markup.button.callback(S.clearSearch, 'clear_search'),
+  Markup.button.callback(S.cancelSwap, 'cancel_swap')
+]
 
 export const providerTitles: Record<string, string> = {
   THORCHAIN: 'THORChain',
@@ -22,23 +26,19 @@ export function providerName(id: string): string {
   return providerTitles[id] ?? id
 }
 
-export function assetCaption(asset: Asset, includeChain: boolean = true) {
-  const map: Record<string, string> = {
-    ETH: 'ERC20',
-    TRON: 'TRC20',
-    SOL: 'SPL'
+const chainLabels: Record<string, string> = {
+  ETH: 'ERC20',
+  BSC: 'BEP20',
+  TRON: 'TRC20',
+  SOL: 'SPL'
+}
+
+export function assetCaption(asset: Asset) {
+  if (!asset.address && !(asset.ticker === 'ETH' && asset.chain !== 'ETH')) {
+    return asset.ticker
   }
-
-  const [chain, token] = asset.identifier.split('.')
-  const [ticker, ref] = token.split('-')
-
-  let caption = ticker
-
-  if (ref && map[chain] && includeChain) {
-    caption += ` (${map[chain]})`
-  }
-
-  return caption
+  const label = chainLabels[asset.chain] ?? asset.chain
+  return `${asset.ticker} (${label})`
 }
 
 export function assetKeyboard(assets: Asset[], disabledIdentifier?: string, showBack: boolean = false) {
@@ -55,6 +55,23 @@ export function assetKeyboard(assets: Asset[], disabledIdentifier?: string, show
   }
 
   rows.push(showBack ? backCancelRow : cancelButtonRow)
+  return Markup.inlineKeyboard(rows)
+}
+
+export function searchResultsKeyboard(assets: Asset[], disabledIdentifier?: string) {
+  const buttons = assets.map((a, i) => {
+    if (a.identifier === disabledIdentifier) {
+      return Markup.button.callback(`✓ ${assetCaption(a)}`, 'disabled')
+    }
+    return Markup.button.callback(assetCaption(a), `sselect_${i}`)
+  })
+
+  const rows: ReturnType<typeof Markup.button.callback>[][] = []
+  for (let i = 0; i < buttons.length; i += 2) {
+    rows.push(buttons.slice(i, i + 2))
+  }
+
+  rows.push(clearSearchCancelRow)
   return Markup.inlineKeyboard(rows)
 }
 
