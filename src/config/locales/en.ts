@@ -15,7 +15,8 @@ export const en = {
   selectReceiveAsset: '🔄 *Swap*\n\n{progress}\n\nSelect the asset you want to *receive* or type to search:',
 
   // --- Step 3: Enter amount ---
-  enterAmount: '🔄 *Swap*\n\n{progress}\n\n💰 Enter the amount of *{asset}* you want to swap:',
+  enterAmount:
+    '🔄 *Swap*\n\n{progress}\n\n💰 Enter the amount of *{asset}* you want to swap\nor use `$` for USD (e.g. `$100`):',
   invalidAmount:
     '🔄 *Swap*\n\n{progress}\n\n⚠️ Please enter a valid positive number.\n\n💰 Enter the amount of *{asset}* you want to swap:',
 
@@ -35,15 +36,15 @@ export const en = {
   allProvidersFailed:
     '🔄 *Swap*\n\n{progress}\n\n❌ No providers could fulfill this swap. Try a different amount or pair.',
   quotesHeader: '🔄 *Swap*\n\n{progress}\n\n📊 *Quotes* ({count}):\n\n{routes}\n\n',
-  quoteLine: '*{index}.* {provider}\n    {amount} {ticker}  ·  {time}',
+  quoteLine: '*{index}.* {provider}\n    {amount} {ticker} {receiveUsd}  ·  {time}',
   quoteError: '🔄 *Swap*\n\n{progress}\n\n❌ Failed to fetch quote: {error}',
 
   // --- Swap summary (confirm screen) ---
   swapSummary:
     '📋 *Swap Summary*\n\n' +
-    '*Send:* {sendAmount} {sendAsset}\n' +
-    '*Receive:* ~{receiveAmount} {receiveAsset}\n' +
-    '*Min receive:* {minReceive} {receiveAsset}\n\n' +
+    '*Send:* {sendAmount} {sendAsset} {sendUsd}\n' +
+    '*Receive:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    '*Min receive:* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '*Destination:*\n`{destination}`\n' +
     '*Refund:*\n`{refund}`\n\n' +
     '*Provider:* {provider}\n' +
@@ -54,20 +55,20 @@ export const en = {
   // --- Swap confirmed ---
   swapConfirmed:
     '✅ *Swap Prepared!*\n\n' +
-    '*Send:* {sendAmount} {sendAsset}\n' +
-    '*Receive:* ~{receiveAmount} {receiveAsset}\n' +
+    '*Send:* {sendAmount} {sendAsset} {sendUsd}\n' +
+    '*Receive:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
     '*Send to:*\n`{inboundAddress}`\n\n' +
     '*Provider:* {provider}\n' +
     '*Estimated time:* {time}\n' +
     '*Expires in:* {expiration}\n\n' +
-    '📱 Scan QR to send *{sendAmount} {sendAsset}*',
+    '📱 Scan QR to send *{sendAmount} {sendAsset}* {sendUsd}',
 
   // --- Swap errors ---
   preparingSwap:
     '📋 *Swap Summary*\n\n' +
-    '*Send:* {sendAmount} {sendAsset}\n' +
-    '*Receive:* ~{receiveAmount} {receiveAsset}\n' +
-    '*Min receive:* {minReceive} {receiveAsset}\n\n' +
+    '*Send:* {sendAmount} {sendAsset} {sendUsd}\n' +
+    '*Receive:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    '*Min receive:* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '*Destination:*\n`{destination}`\n' +
     '*Refund:*\n`{refund}`\n\n' +
     '*Provider:* {provider}\n' +
@@ -85,6 +86,10 @@ export const en = {
   alreadySelected: 'Already selected as send asset',
   openInWallet: '💳 Open in Wallet',
 
+  // --- Price ---
+  priceUnavailable:
+    '🔄 *Swap*\n\n{progress}\n\n⚠️ Price data unavailable for *{asset}*. Please enter the amount in tokens instead.',
+
   // --- Bot-level messages ---
   botError: '❌ Something went wrong. Please try again with /swap.',
   botCancelReply: '🚫 Current operation cancelled.',
@@ -92,7 +97,7 @@ export const en = {
   // --- Progress lines ---
   progressSend: '✅ Send: *{asset}*',
   progressReceive: '✅ Receive: *{asset}*',
-  progressAmount: '✅ Amount: *{amount} {asset}*',
+  progressAmount: '✅ Amount: *{amount} {asset}* {amountUsd}',
   progressDestination: '✅ Destination: `{address}`',
   progressRefund: '✅ Refund: `{address}`'
 }

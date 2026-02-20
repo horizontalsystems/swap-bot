@@ -17,7 +17,8 @@ export const ru: Strings = {
   selectReceiveAsset: '🔄 *Обмен*\n\n{progress}\n\nВыберите актив для *получения* или введите для поиска:',
 
   // --- Step 3: Enter amount ---
-  enterAmount: '🔄 *Обмен*\n\n{progress}\n\n💰 Введите количество *{asset}* для обмена:',
+  enterAmount:
+    '🔄 *Обмен*\n\n{progress}\n\n💰 Введите количество *{asset}* для обмена\nили используйте `$` для USD (напр. `$100`):',
   invalidAmount:
     '🔄 *Обмен*\n\n{progress}\n\n⚠️ Введите корректное положительное число.\n\n💰 Введите количество *{asset}* для обмена:',
 
@@ -36,15 +37,15 @@ export const ru: Strings = {
   allProvidersFailed:
     '🔄 *Обмен*\n\n{progress}\n\n❌ Ни один провайдер не смог выполнить обмен. Попробуйте другую сумму или пару.',
   quotesHeader: '🔄 *Обмен*\n\n{progress}\n\n📊 *Котировки* ({count}):\n\n{routes}\n\n',
-  quoteLine: '*{index}.* {provider}\n    {amount} {ticker}  ·  {time}',
+  quoteLine: '*{index}.* {provider}\n    {amount} {ticker} {receiveUsd}  ·  {time}',
   quoteError: '🔄 *Обмен*\n\n{progress}\n\n❌ Ошибка получения котировки: {error}',
 
   // --- Swap summary (confirm screen) ---
   swapSummary:
     '📋 *Итого по обмену*\n\n' +
-    '*Отправка:* {sendAmount} {sendAsset}\n' +
-    '*Получение:* ~{receiveAmount} {receiveAsset}\n' +
-    '*Мин. получение:* {minReceive} {receiveAsset}\n\n' +
+    '*Отправка:* {sendAmount} {sendAsset} {sendUsd}\n' +
+    '*Получение:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    '*Мин. получение:* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '*Адрес назначения:*\n`{destination}`\n' +
     '*Адрес возврата:*\n`{refund}`\n\n' +
     '*Провайдер:* {provider}\n' +
@@ -55,20 +56,20 @@ export const ru: Strings = {
   // --- Swap confirmed ---
   swapConfirmed:
     '✅ *Обмен подготовлен!*\n\n' +
-    '*Отправка:* {sendAmount} {sendAsset}\n' +
-    '*Получение:* ~{receiveAmount} {receiveAsset}\n' +
+    '*Отправка:* {sendAmount} {sendAsset} {sendUsd}\n' +
+    '*Получение:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
     '*Отправить на:*\n`{inboundAddress}`\n\n' +
     '*Провайдер:* {provider}\n' +
     '*Ожидаемое время:* {time}\n' +
     '*Истекает через:* {expiration}\n\n' +
-    '📱 Отсканируйте QR для отправки *{sendAmount} {sendAsset}*',
+    '📱 Отсканируйте QR для отправки *{sendAmount} {sendAsset}* {sendUsd}',
 
   // --- Swap errors ---
   preparingSwap:
     '📋 *Итого по обмену*\n\n' +
-    '*Отправка:* {sendAmount} {sendAsset}\n' +
-    '*Получение:* ~{receiveAmount} {receiveAsset}\n' +
-    '*Мин. получение:* {minReceive} {receiveAsset}\n\n' +
+    '*Отправка:* {sendAmount} {sendAsset} {sendUsd}\n' +
+    '*Получение:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    '*Мин. получение:* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '*Адрес назначения:*\n`{destination}`\n' +
     '*Адрес возврата:*\n`{refund}`\n\n' +
     '*Провайдер:* {provider}\n' +
@@ -86,6 +87,10 @@ export const ru: Strings = {
   alreadySelected: 'Уже выбран как актив отправки',
   openInWallet: '💳 Открыть в кошельке',
 
+  // --- Price ---
+  priceUnavailable:
+    '🔄 *Обмен*\n\n{progress}\n\n⚠️ Данные о цене для *{asset}* недоступны. Пожалуйста, введите сумму в токенах.',
+
   // --- Bot-level messages ---
   botError: '❌ Что-то пошло не так. Попробуйте снова с /swap.',
   botCancelReply: '🚫 Текущая операция отменена.',
@@ -93,7 +98,7 @@ export const ru: Strings = {
   // --- Progress lines ---
   progressSend: '✅ Отправка: *{asset}*',
   progressReceive: '✅ Получение: *{asset}*',
-  progressAmount: '✅ Сумма: *{amount} {asset}*',
+  progressAmount: '✅ Сумма: *{amount} {asset}* {amountUsd}',
   progressDestination: '✅ Назначение: `{address}`',
   progressRefund: '✅ Возврат: `{address}`'
 }

@@ -24,6 +24,7 @@ export interface Asset {
   ticker: string // e.g. "BTC", "USDT"
   chain: string // e.g. "BTC", "ETH"
   address: string | null // contract address, null for native tokens
+  coingeckoId: string | null // CoinGecko UID for price lookups
 }
 
 // --- Quote types ---
@@ -77,6 +78,7 @@ export interface SwapSessionData extends Scenes.WizardSessionData {
   assetIn?: Asset
   assetOut?: Asset
   amount?: number
+  usdInputAmount?: number // stores original USD when user types $100
   destinationAddress?: string
   refundAddress?: string
   routes?: QuoteRoute[]

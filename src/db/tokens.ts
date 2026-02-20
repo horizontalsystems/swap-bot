@@ -8,6 +8,7 @@ type TokenRow = {
   ticker: string | null
   chain: string | null
   address: string | null
+  coingecko_id: string | null
 }
 
 function rowToAsset(r: TokenRow): Asset {
@@ -16,7 +17,8 @@ function rowToAsset(r: TokenRow): Asset {
     name: r.name ?? r.identifier,
     ticker: r.ticker ?? r.identifier.split('.')[1]?.split('-')[0] ?? r.identifier,
     chain: r.chain ?? r.identifier.split('.')[0] ?? '',
-    address: r.address ?? null
+    address: r.address ?? null,
+    coingeckoId: r.coingecko_id ?? null
   }
 }
 
@@ -30,16 +32,18 @@ export function upsertTokens(
     chain?: string
     address?: string | null
     providers?: string[]
+    coingeckoId?: string | null
   }[]
 ): void {
   const database = getDb()
 
   const stmt = database.prepare(`
-    INSERT INTO tokens (identifier, name, ticker, chain, address, providers)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO tokens (identifier, name, ticker, chain, address, providers, coingecko_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(identifier) DO UPDATE SET
       name = excluded.name, ticker = excluded.ticker, chain = excluded.chain,
-      address = excluded.address, providers = excluded.providers
+      address = excluded.address, providers = excluded.providers,
+      coingecko_id = excluded.coingecko_id
   `)
 
   const transaction = database.transaction(() => {
@@ -50,7 +54,8 @@ export function upsertTokens(
         token.ticker ?? null,
         token.chain ?? null,
         token.address ?? null,
-        token.providers ? JSON.stringify(token.providers) : null
+        token.providers ? JSON.stringify(token.providers) : null,
+        token.coingeckoId ?? null
       )
     }
   })
@@ -66,7 +71,9 @@ export function getAssets(identifiers: string[]): Asset[] {
   const database = getDb()
   const placeholders = identifiers.map(() => '?').join(', ')
   const rows = database
-    .prepare(`SELECT identifier, name, ticker, chain, address FROM tokens WHERE identifier IN (${placeholders})`)
+    .prepare(
+      `SELECT identifier, name, ticker, chain, address, coingecko_id FROM tokens WHERE identifier IN (${placeholders})`
+    )
     .all(...identifiers) as TokenRow[]
 
   const byId = new Map(rows.map(r => [r.identifier, r]))
@@ -82,7 +89,7 @@ export function getAssets(identifiers: string[]): Asset[] {
 export function getAssetByIdentifier(identifier: string): Asset | null {
   const database = getDb()
   const row = database
-    .prepare('SELECT identifier, name, ticker, chain, address FROM tokens WHERE identifier = ?')
+    .prepare('SELECT identifier, name, ticker, chain, address, coingecko_id FROM tokens WHERE identifier = ?')
     .get(identifier) as TokenRow | undefined
   if (!row) return null
   return rowToAsset(row)
@@ -107,7 +114,7 @@ export function searchAssets(query: string, limit: number = 20): Asset[] {
   const contains = `%${query}%`
   const rows = database
     .prepare(
-      `SELECT identifier, name, ticker, chain, address,
+      `SELECT identifier, name, ticker, chain, address, coingecko_id,
         CASE
           WHEN ticker LIKE ? COLLATE NOCASE THEN 0
           WHEN ticker LIKE ? COLLATE NOCASE THEN 1

@@ -20,7 +20,8 @@ export async function syncTokens(): Promise<void> {
       ticker: t.ticker as string | undefined,
       chain: t.chain as string | undefined,
       address: t.address as string | null | undefined,
-      providers: t.providers
+      providers: t.providers,
+      coingeckoId: t.coingeckoId as string | null | undefined
     }))
   )
 

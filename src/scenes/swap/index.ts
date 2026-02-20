@@ -4,6 +4,7 @@ import { ALLOWED_PROVIDERS, FEATURED_IDENTIFIERS } from '../../config/assets'
 import { s, t } from '../../config/strings'
 import { getAssetByIdentifier, getAssets, getProvidersForPair, searchAssets } from '../../db/tokens'
 import { SwapContext } from '../../types/context'
+import { getAssetPrice, getSwapPrices } from '../../services/prices'
 import { fetchQuote } from '../../utils/api'
 import { preflightMemoless, registerMemoless } from '../../utils/memoless-api'
 import { validateAddress } from '../../utils/addressValidator'
@@ -18,6 +19,7 @@ import {
   deleteUserMessage,
   editSwapMessage,
   formatTime,
+  formatUsd,
   providerName,
   searchResultsKeyboard
 } from './helpers'
@@ -61,12 +63,16 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
   quoteResponse.routes.sort((a, b) => parseFloat(b.expectedBuyAmount) - parseFloat(a.expectedBuyAmount))
   ctx.scene.session.routes = quoteResponse.routes
 
+  const { outPrice } = await getSwapPrices(assetIn!.coingeckoId, assetOut!.coingeckoId)
+
   const routeLines = quoteResponse.routes.map((route, i) => {
+    const receiveUsdVal = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmount) : null
     return t(S.quoteLine, {
       index: i + 1,
       provider: providerName(route.providers[0]),
       amount: route.expectedBuyAmount,
       ticker: assetOut!.ticker,
+      receiveUsd: formatUsd(receiveUsdVal),
       time: formatTime(route.estimatedTime.total)
     })
   })
@@ -102,6 +108,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     ctx.scene.session.assetIn = undefined
     ctx.scene.session.assetOut = undefined
     ctx.scene.session.amount = undefined
+    ctx.scene.session.usdInputAmount = undefined
     ctx.scene.session.destinationAddress = undefined
     ctx.scene.session.refundAddress = undefined
     ctx.scene.session.routes = undefined
@@ -176,18 +183,45 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     const S = s(ctx.from?.language_code)
     await deleteUserMessage(ctx)
 
-    const amount = parseFloat(ctx.message.text)
+    const text = ctx.message.text.trim()
     const asset = assetCaption(ctx.scene.session.assetIn!)
+    const isUsdInput = text.startsWith('$')
 
-    if (isNaN(amount) || amount <= 0) {
-      const progress = buildProgress(ctx.scene.session, S)
-      await editSwapMessage(ctx, t(S.invalidAmount, { progress, asset }), {
-        ...Markup.inlineKeyboard([backCancelRow(S)])
-      })
-      return
+    if (isUsdInput) {
+      const usdAmount = parseFloat(text.slice(1))
+      if (isNaN(usdAmount) || usdAmount <= 0) {
+        const progress = buildProgress(ctx.scene.session, S)
+        await editSwapMessage(ctx, t(S.invalidAmount, { progress, asset }), {
+          ...Markup.inlineKeyboard([backCancelRow(S)])
+        })
+        return
+      }
+
+      const price = await getAssetPrice(ctx.scene.session.assetIn!.coingeckoId)
+      if (price == null) {
+        const progress = buildProgress(ctx.scene.session, S)
+        await editSwapMessage(ctx, t(S.priceUnavailable, { progress, asset }), {
+          ...Markup.inlineKeyboard([backCancelRow(S)])
+        })
+        return
+      }
+
+      ctx.scene.session.amount = usdAmount / price
+      ctx.scene.session.usdInputAmount = usdAmount
+    } else {
+      const amount = parseFloat(text)
+      if (isNaN(amount) || amount <= 0) {
+        const progress = buildProgress(ctx.scene.session, S)
+        await editSwapMessage(ctx, t(S.invalidAmount, { progress, asset }), {
+          ...Markup.inlineKeyboard([backCancelRow(S)])
+        })
+        return
+      }
+
+      ctx.scene.session.amount = amount
+      const price = await getAssetPrice(ctx.scene.session.assetIn!.coingeckoId)
+      ctx.scene.session.usdInputAmount = price != null ? amount * price : undefined
     }
-
-    ctx.scene.session.amount = amount
 
     const progress = buildProgress(ctx.scene.session, S)
     const outAsset = assetCaption(ctx.scene.session.assetOut!)
@@ -297,6 +331,7 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
 
     ctx.scene.session.assetIn = asset
     await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
+    if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
 
     const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
 
@@ -320,6 +355,7 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
 
     ctx.scene.session.assetOut = asset
     await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
+    if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
 
     const progress = buildProgress(ctx.scene.session, S)
     await ctx.editMessageText(t(S.enterAmount, { progress, asset: assetCaption(ctx.scene.session.assetIn!) }), {
@@ -346,6 +382,7 @@ swapWizard.action(/^sselect_(\d+)$/, async ctx => {
     ctx.scene.session.assetIn = asset
     ctx.scene.session.searchResults = undefined
     await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
+    if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
 
     const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
     const progress = buildProgress(ctx.scene.session, S)
@@ -361,6 +398,7 @@ swapWizard.action(/^sselect_(\d+)$/, async ctx => {
     ctx.scene.session.assetOut = asset
     ctx.scene.session.searchResults = undefined
     await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
+    if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
 
     const progress = buildProgress(ctx.scene.session, S)
     await ctx.editMessageText(t(S.enterAmount, { progress, asset: assetCaption(ctx.scene.session.assetIn!) }), {
@@ -388,13 +426,21 @@ swapWizard.action(/^route_(\d+)$/, async ctx => {
 
   await ctx.answerCbQuery(`Selected ${providerName(route.providers[0])}`)
 
+  const { inPrice, outPrice } = await getSwapPrices(assetIn.coingeckoId, assetOut.coingeckoId)
+  const sendUsdVal = inPrice != null ? inPrice * amount : null
+  const receiveUsdVal = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmount) : null
+  const minReceiveUsdVal = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmountMaxSlippage) : null
+
   await ctx.editMessageText(
     t(S.swapSummary, {
       sendAmount: amount,
       sendAsset: assetCaption(assetIn),
+      sendUsd: formatUsd(sendUsdVal),
       receiveAmount: route.expectedBuyAmount,
       receiveAsset: assetCaption(assetOut),
+      receiveUsd: formatUsd(receiveUsdVal),
       minReceive: route.expectedBuyAmountMaxSlippage,
+      minReceiveUsd: formatUsd(minReceiveUsdVal),
       destination: destinationAddress,
       refund: refundAddress,
       provider: providerName(route.providers[0]),
@@ -420,13 +466,22 @@ swapWizard.action('confirm_swap', async ctx => {
   }
 
   await ctx.answerCbQuery(S.processingSwap)
+
+  const { inPrice, outPrice } = await getSwapPrices(assetIn.coingeckoId, assetOut.coingeckoId)
+  const sendUsdVal = inPrice != null ? inPrice * amount : null
+  const receiveUsdVal = outPrice != null ? outPrice * parseFloat(quote.expectedBuyAmount) : null
+  const minReceiveUsdVal = outPrice != null ? outPrice * parseFloat(quote.expectedBuyAmountMaxSlippage) : null
+
   await ctx.editMessageText(
     t(S.preparingSwap, {
       sendAmount: amount,
       sendAsset: assetCaption(assetIn),
+      sendUsd: formatUsd(sendUsdVal),
       receiveAmount: quote.expectedBuyAmount,
       receiveAsset: assetCaption(assetOut),
+      receiveUsd: formatUsd(receiveUsdVal),
       minReceive: quote.expectedBuyAmountMaxSlippage,
+      minReceiveUsd: formatUsd(minReceiveUsdVal),
       destination: destinationAddress,
       refund: refundAddress,
       provider: providerName(quote.providers[0]),
@@ -505,11 +560,16 @@ swapWizard.action('confirm_swap', async ctx => {
     const base64Data = qrDataURL.replace(/^data:image\/png;base64,/, '')
     const qrBuffer = Buffer.from(base64Data, 'base64')
 
+    const confirmSendUsd = inPrice != null ? inPrice * sendAmount : null
+    const confirmReceiveUsd = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmount) : null
+
     const caption = t(S.swapConfirmed, {
       sendAmount,
       sendAsset: assetCaption(assetIn),
+      sendUsd: formatUsd(confirmSendUsd),
       receiveAmount: route.expectedBuyAmount,
       receiveAsset: assetCaption(assetOut),
+      receiveUsd: formatUsd(confirmReceiveUsd),
       inboundAddress: inboundAddr ?? '',
       provider: route.providers.map(p => providerName(p)).join(', '),
       time: formatTime(route.estimatedTime.total),
@@ -569,6 +629,7 @@ swapWizard.action('go_back', async ctx => {
     case 4: {
       // At destination input → back to amount
       ctx.scene.session.amount = undefined
+      ctx.scene.session.usdInputAmount = undefined
       const progress = buildProgress(ctx.scene.session, S)
       await ctx.editMessageText(t(S.enterAmount, { progress, asset: assetCaption(ctx.scene.session.assetIn!) }), {
         parse_mode: 'Markdown',
