@@ -18,9 +18,7 @@ export const zh: Strings = {
 
   // --- Step 3: Enter amount ---
   enterAmount:
-    '🔄 *兑换*\n\n{progress}\n\n' +
-    '💰 请输入要兑换的 *{asset}* 数量：\n' +
-    '_提示：输入_ `$100` _可按美元金额兑换_',
+    '🔄 *兑换*\n\n{progress}\n\n' + '💰 请输入要兑换的 *{asset}* 数量：\n' + '_提示：输入_ `$100` _可按美元金额兑换_',
   invalidAmount:
     '🔄 *兑换*\n\n{progress}\n\n' +
     '⚠️ *金额无效。* 请输入有效的正数。\n\n' +
@@ -29,27 +27,18 @@ export const zh: Strings = {
 
   // --- Step 4: Destination address ---
   enterDestination: '🔄 *兑换*\n\n{progress}\n\n📍 请输入 *{asset}* _接收_地址：',
-  invalidDestination:
-    '🔄 *兑换*\n\n{progress}\n\n' +
-    '⚠️ *地址无效。* {hint}\n\n' +
-    '📍 请输入 *{asset}* _接收_地址：',
+  invalidDestination: '🔄 *兑换*\n\n{progress}\n\n' + '⚠️ *地址无效。* {hint}\n\n' + '📍 请输入 *{asset}* _接收_地址：',
 
   // --- Step 5: Refund address ---
   enterRefund: '🔄 *兑换*\n\n{progress}\n\n🔙 请输入 *{asset}* _退款_地址：',
-  invalidRefund:
-    '🔄 *兑换*\n\n{progress}\n\n' +
-    '⚠️ *地址无效。* {hint}\n\n' +
-    '🔙 请输入 *{asset}* _退款_地址：',
+  invalidRefund: '🔄 *兑换*\n\n{progress}\n\n' + '⚠️ *地址无效。* {hint}\n\n' + '🔙 请输入 *{asset}* _退款_地址：',
 
   // --- Quotes ---
   fetchingQuotes: '🔄 *兑换*\n\n{progress}\n\n⏳ _正在获取报价..._',
   noProviders: '🔄 *兑换*\n\n{progress}\n\n❌ 没有提供商支持此交易对。',
   noRoutes: '🔄 *兑换*\n\n{progress}\n\n❌ 此交易对没有可用的兑换路线。',
   allProvidersFailed: '🔄 *兑换*\n\n{progress}\n\n❌ 没有提供商能够完成此兑换。请尝试其他金额或交易对。',
-  quotesHeader:
-    '🔄 *兑换*\n\n{progress}\n\n' +
-    '📊 *{count} 个报价可用：*\n\n{routes}\n\n' +
-    '_请选择以下路线：_',
+  quotesHeader: '🔄 *兑换*\n\n{progress}\n\n' + '📊 *{count} 个报价可用：*\n\n{routes}\n\n' + '_请选择以下路线：_',
   quoteLine: '*{index}.* {provider}\n      _{amount} {ticker}_ {receiveUsd}  ·  🕐 {time}',
   quoteError: '🔄 *兑换*\n\n{progress}\n\n❌ *获取报价失败：* {error}',
 
@@ -101,10 +90,7 @@ export const zh: Strings = {
   openInWallet: '💳 在钱包中打开',
 
   // --- Price ---
-  priceUnavailable:
-    '🔄 *兑换*\n\n{progress}\n\n' +
-    '⚠️ *价格不可用*：*{asset}*。\n' +
-    '_请直接输入代币数量。_',
+  priceUnavailable: '🔄 *兑换*\n\n{progress}\n\n' + '⚠️ *价格不可用*：*{asset}*。\n' + '_请直接输入代币数量。_',
 
   // --- Bot-level messages ---
   botError: '❌ 出了点问题。请使用 /swap 重试。',

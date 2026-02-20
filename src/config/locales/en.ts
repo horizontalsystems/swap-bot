@@ -35,9 +35,7 @@ export const en = {
   // --- Step 5: Refund address ---
   enterRefund: '🔄 *Swap*\n\n{progress}\n\n🔙 Enter your *{asset}* _refund_ address:',
   invalidRefund:
-    '🔄 *Swap*\n\n{progress}\n\n' +
-    '⚠️ *Invalid address.* {hint}\n\n' +
-    '🔙 Enter your *{asset}* _refund_ address:',
+    '🔄 *Swap*\n\n{progress}\n\n' + '⚠️ *Invalid address.* {hint}\n\n' + '🔙 Enter your *{asset}* _refund_ address:',
 
   // --- Quotes ---
   fetchingQuotes: '🔄 *Swap*\n\n{progress}\n\n⏳ _Fetching quotes..._',
@@ -46,9 +44,7 @@ export const en = {
   allProvidersFailed:
     '🔄 *Swap*\n\n{progress}\n\n❌ No providers could fulfill this swap. Try a different amount or pair.',
   quotesHeader:
-    '🔄 *Swap*\n\n{progress}\n\n' +
-    '📊 *{count} Quotes available:*\n\n{routes}\n\n' +
-    '_Select a route below:_',
+    '🔄 *Swap*\n\n{progress}\n\n' + '📊 *{count} Quotes available:*\n\n{routes}\n\n' + '_Select a route below:_',
   quoteLine: '*{index}.* {provider}\n      _{amount} {ticker}_ {receiveUsd}  ·  🕐 {time}',
   quoteError: '🔄 *Swap*\n\n{progress}\n\n❌ *Failed to fetch quote:* {error}',
 

@@ -30,16 +30,12 @@ export const ru: Strings = {
   // --- Step 4: Destination address ---
   enterDestination: '🔄 *Обмен*\n\n{progress}\n\n📍 Введите адрес _назначения_ *{asset}*:',
   invalidDestination:
-    '🔄 *Обмен*\n\n{progress}\n\n' +
-    '⚠️ *Неверный адрес.* {hint}\n\n' +
-    '📍 Введите адрес _назначения_ *{asset}*:',
+    '🔄 *Обмен*\n\n{progress}\n\n' + '⚠️ *Неверный адрес.* {hint}\n\n' + '📍 Введите адрес _назначения_ *{asset}*:',
 
   // --- Step 5: Refund address ---
   enterRefund: '🔄 *Обмен*\n\n{progress}\n\n🔙 Введите адрес _возврата_ *{asset}*:',
   invalidRefund:
-    '🔄 *Обмен*\n\n{progress}\n\n' +
-    '⚠️ *Неверный адрес.* {hint}\n\n' +
-    '🔙 Введите адрес _возврата_ *{asset}*:',
+    '🔄 *Обмен*\n\n{progress}\n\n' + '⚠️ *Неверный адрес.* {hint}\n\n' + '🔙 Введите адрес _возврата_ *{asset}*:',
 
   // --- Quotes ---
   fetchingQuotes: '🔄 *Обмен*\n\n{progress}\n\n⏳ _Получение котировок..._',
@@ -48,9 +44,7 @@ export const ru: Strings = {
   allProvidersFailed:
     '🔄 *Обмен*\n\n{progress}\n\n❌ Ни один провайдер не смог выполнить обмен. Попробуйте другую сумму или пару.',
   quotesHeader:
-    '🔄 *Обмен*\n\n{progress}\n\n' +
-    '📊 *{count} Котировок доступно:*\n\n{routes}\n\n' +
-    '_Выберите маршрут ниже:_',
+    '🔄 *Обмен*\n\n{progress}\n\n' + '📊 *{count} Котировок доступно:*\n\n{routes}\n\n' + '_Выберите маршрут ниже:_',
   quoteLine: '*{index}.* {provider}\n      _{amount} {ticker}_ {receiveUsd}  ·  🕐 {time}',
   quoteError: '🔄 *Обмен*\n\n{progress}\n\n❌ *Ошибка получения котировки:* {error}',
 
@@ -103,9 +97,7 @@ export const ru: Strings = {
 
   // --- Price ---
   priceUnavailable:
-    '🔄 *Обмен*\n\n{progress}\n\n' +
-    '⚠️ *Цена недоступна* для *{asset}*.\n' +
-    '_Пожалуйста, введите сумму в токенах._',
+    '🔄 *Обмен*\n\n{progress}\n\n' + '⚠️ *Цена недоступна* для *{asset}*.\n' + '_Пожалуйста, введите сумму в токенах._',
 
   // --- Bot-level messages ---
   botError: '❌ Что-то пошло не так. Попробуйте снова с /swap.',

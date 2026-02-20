@@ -18,6 +18,7 @@ import {
   deleteSwapMessage,
   deleteUserMessage,
   editSwapMessage,
+  formatAmount,
   formatTime,
   formatUsd,
   providerName,
@@ -70,7 +71,7 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
     return t(S.quoteLine, {
       index: i + 1,
       provider: providerName(route.providers[0]),
-      amount: route.expectedBuyAmount,
+      amount: formatAmount(route.expectedBuyAmount),
       ticker: assetOut!.ticker,
       receiveUsd: formatUsd(receiveUsdVal),
       time: formatTime(route.estimatedTime.total)
@@ -433,13 +434,13 @@ swapWizard.action(/^route_(\d+)$/, async ctx => {
 
   await ctx.editMessageText(
     t(S.swapSummary, {
-      sendAmount: amount,
+      sendAmount: formatAmount(amount),
       sendAsset: assetCaption(assetIn),
       sendUsd: formatUsd(sendUsdVal),
-      receiveAmount: route.expectedBuyAmount,
+      receiveAmount: formatAmount(route.expectedBuyAmount),
       receiveAsset: assetCaption(assetOut),
       receiveUsd: formatUsd(receiveUsdVal),
-      minReceive: route.expectedBuyAmountMaxSlippage,
+      minReceive: formatAmount(route.expectedBuyAmountMaxSlippage),
       minReceiveUsd: formatUsd(minReceiveUsdVal),
       destination: destinationAddress,
       refund: refundAddress,
@@ -474,13 +475,13 @@ swapWizard.action('confirm_swap', async ctx => {
 
   await ctx.editMessageText(
     t(S.preparingSwap, {
-      sendAmount: amount,
+      sendAmount: formatAmount(amount),
       sendAsset: assetCaption(assetIn),
       sendUsd: formatUsd(sendUsdVal),
-      receiveAmount: quote.expectedBuyAmount,
+      receiveAmount: formatAmount(quote.expectedBuyAmount),
       receiveAsset: assetCaption(assetOut),
       receiveUsd: formatUsd(receiveUsdVal),
-      minReceive: quote.expectedBuyAmountMaxSlippage,
+      minReceive: formatAmount(quote.expectedBuyAmountMaxSlippage),
       minReceiveUsd: formatUsd(minReceiveUsdVal),
       destination: destinationAddress,
       refund: refundAddress,
@@ -564,10 +565,10 @@ swapWizard.action('confirm_swap', async ctx => {
     const confirmReceiveUsd = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmount) : null
 
     const caption = t(S.swapConfirmed, {
-      sendAmount,
+      sendAmount: formatAmount(sendAmount),
       sendAsset: assetCaption(assetIn),
       sendUsd: formatUsd(confirmSendUsd),
-      receiveAmount: route.expectedBuyAmount,
+      receiveAmount: formatAmount(route.expectedBuyAmount),
       receiveAsset: assetCaption(assetOut),
       receiveUsd: formatUsd(confirmReceiveUsd),
       inboundAddress: inboundAddr ?? '',

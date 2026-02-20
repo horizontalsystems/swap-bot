@@ -30,16 +30,12 @@ export const fa: Strings = {
   // --- Step 4: Destination address ---
   enterDestination: '🔄 *تبادل*\n\n{progress}\n\n📍 آدرس _مقصد_ *{asset}* را وارد کنید:',
   invalidDestination:
-    '🔄 *تبادل*\n\n{progress}\n\n' +
-    '⚠️ *آدرس نامعتبر.* {hint}\n\n' +
-    '📍 آدرس _مقصد_ *{asset}* را وارد کنید:',
+    '🔄 *تبادل*\n\n{progress}\n\n' + '⚠️ *آدرس نامعتبر.* {hint}\n\n' + '📍 آدرس _مقصد_ *{asset}* را وارد کنید:',
 
   // --- Step 5: Refund address ---
   enterRefund: '🔄 *تبادل*\n\n{progress}\n\n🔙 آدرس _بازگشت_ *{asset}* را وارد کنید:',
   invalidRefund:
-    '🔄 *تبادل*\n\n{progress}\n\n' +
-    '⚠️ *آدرس نامعتبر.* {hint}\n\n' +
-    '🔙 آدرس _بازگشت_ *{asset}* را وارد کنید:',
+    '🔄 *تبادل*\n\n{progress}\n\n' + '⚠️ *آدرس نامعتبر.* {hint}\n\n' + '🔙 آدرس _بازگشت_ *{asset}* را وارد کنید:',
 
   // --- Quotes ---
   fetchingQuotes: '🔄 *تبادل*\n\n{progress}\n\n⏳ _در حال دریافت قیمت‌ها..._',
@@ -47,10 +43,7 @@ export const fa: Strings = {
   noRoutes: '🔄 *تبادل*\n\n{progress}\n\n❌ مسیر تبادلی برای این جفت موجود نیست.',
   allProvidersFailed:
     '🔄 *تبادل*\n\n{progress}\n\n❌ هیچ ارائه‌دهنده‌ای نتوانست این تبادل را انجام دهد. مبلغ یا جفت دیگری را امتحان کنید.',
-  quotesHeader:
-    '🔄 *تبادل*\n\n{progress}\n\n' +
-    '📊 *{count} قیمت موجود:*\n\n{routes}\n\n' +
-    '_یک مسیر انتخاب کنید:_',
+  quotesHeader: '🔄 *تبادل*\n\n{progress}\n\n' + '📊 *{count} قیمت موجود:*\n\n{routes}\n\n' + '_یک مسیر انتخاب کنید:_',
   quoteLine: '*{index}.* {provider}\n      _{amount} {ticker}_ {receiveUsd}  ·  🕐 {time}',
   quoteError: '🔄 *تبادل*\n\n{progress}\n\n❌ *خطا در دریافت قیمت:* {error}',
 

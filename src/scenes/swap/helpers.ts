@@ -75,9 +75,41 @@ export function searchResultsKeyboard(assets: Asset[], S: Strings, disabledIdent
   return Markup.inlineKeyboard(rows)
 }
 
+/**
+ * Smart number formatting: show ~4 significant digits in the decimal part,
+ * reducing precision for larger numbers where decimals matter less.
+ */
+export function formatAmount(value: number | string): string {
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  if (isNaN(num)) return String(value)
+  if (num === 0) return '0'
+
+  const abs = Math.abs(num)
+
+  if (abs >= 10_000) return num.toLocaleString('en-US', { maximumFractionDigits: 0 })
+  if (abs >= 1_000) return num.toLocaleString('en-US', { maximumFractionDigits: 1 })
+  if (abs >= 100) return num.toLocaleString('en-US', { maximumFractionDigits: 2 })
+  if (abs >= 10) return num.toLocaleString('en-US', { maximumFractionDigits: 2 })
+  if (abs >= 1) return num.toLocaleString('en-US', { maximumFractionDigits: 4 })
+
+  // For numbers < 1: find leading zeros then show 4 significant digits
+  const leadingZeros = -Math.floor(Math.log10(abs)) - 1
+  const decimals = leadingZeros + 4
+  return num.toFixed(Math.min(decimals, 20))
+}
+
 export function formatUsd(amount: number | null | undefined): string {
   if (amount == null) return ''
-  return `(~$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+  const abs = Math.abs(amount)
+  let formatted: string
+  if (abs >= 1_000) {
+    formatted = amount.toLocaleString('en-US', { maximumFractionDigits: 0 })
+  } else if (abs >= 1) {
+    formatted = amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  } else {
+    formatted = formatAmount(amount)
+  }
+  return `(~$${formatted})`
 }
 
 export function formatTime(seconds: number): string {
@@ -99,7 +131,7 @@ export function buildProgress(session: SwapSessionData, S: Strings): string {
   if (session.amount != null && session.assetIn)
     lines.push(
       t(S.progressAmount, {
-        amount: session.amount,
+        amount: formatAmount(session.amount),
         asset: assetCaption(session.assetIn),
         amountUsd: formatUsd(session.usdInputAmount)
       })
