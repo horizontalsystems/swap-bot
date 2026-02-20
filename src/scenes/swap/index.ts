@@ -8,7 +8,6 @@ import { getAssetPrice, getSwapPrices } from '../../services/prices'
 import { fetchQuote } from '../../utils/api'
 import { preflightMemoless, registerMemoless } from '../../utils/memoless-api'
 import { validateAddress } from '../../utils/addressValidator'
-import { buildPaymentUri } from '../../utils/paymentUri'
 import {
   assetCaption,
   assetKeyboard,
@@ -22,7 +21,8 @@ import {
   formatTime,
   formatUsd,
   providerName,
-  searchResultsKeyboard
+  searchResultsKeyboard,
+  shortenAddress
 } from './helpers'
 
 // --- Helpers ---
@@ -442,8 +442,8 @@ swapWizard.action(/^route_(\d+)$/, async ctx => {
       receiveUsd: formatUsd(receiveUsdVal),
       minReceive: formatAmount(route.expectedBuyAmountMaxSlippage),
       minReceiveUsd: formatUsd(minReceiveUsdVal),
-      destination: destinationAddress,
-      refund: refundAddress,
+      destination: shortenAddress(destinationAddress),
+      refund: shortenAddress(refundAddress),
       provider: providerName(route.providers[0]),
       time: formatTime(route.estimatedTime.total)
     }),
@@ -483,8 +483,8 @@ swapWizard.action('confirm_swap', async ctx => {
       receiveUsd: formatUsd(receiveUsdVal),
       minReceive: formatAmount(quote.expectedBuyAmountMaxSlippage),
       minReceiveUsd: formatUsd(minReceiveUsdVal),
-      destination: destinationAddress,
-      refund: refundAddress,
+      destination: shortenAddress(destinationAddress),
+      refund: shortenAddress(refundAddress),
       provider: providerName(quote.providers[0]),
       time: formatTime(quote.estimatedTime.total)
     }),
@@ -564,6 +564,8 @@ swapWizard.action('confirm_swap', async ctx => {
     const confirmSendUsd = inPrice != null ? inPrice * sendAmount : null
     const confirmReceiveUsd = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmount) : null
 
+    const confirmMinReceiveUsd = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmountMaxSlippage) : null
+
     const caption = t(S.swapConfirmed, {
       sendAmount: formatAmount(sendAmount),
       sendAsset: assetCaption(assetIn),
@@ -571,14 +573,19 @@ swapWizard.action('confirm_swap', async ctx => {
       receiveAmount: formatAmount(route.expectedBuyAmount),
       receiveAsset: assetCaption(assetOut),
       receiveUsd: formatUsd(confirmReceiveUsd),
+      minReceive: formatAmount(route.expectedBuyAmountMaxSlippage),
+      minReceiveUsd: formatUsd(confirmMinReceiveUsd),
+      destination: shortenAddress(destinationAddress),
+      refund: shortenAddress(refundAddress),
       inboundAddress: inboundAddr ?? '',
       provider: route.providers.map(p => providerName(p)).join(', '),
       time: formatTime(route.estimatedTime.total),
       expiration: expiresIn != null ? formatTime(expiresIn) : 'N/A'
     })
 
-    const paymentUri = buildPaymentUri(assetIn.chain, inboundAddr!, sendAmount, assetIn.address)
-    const fullCaption = paymentUri ? caption + `\n\n${S.openInWallet}:\n\`${paymentUri}\`` : caption
+    // const paymentUri = buildPaymentUri(assetIn.chain, inboundAddr!, sendAmount, assetIn.address)
+    // const fullCaption = paymentUri ? caption + `\n\n${S.openInWallet}:\n\`${paymentUri}\`` : caption
+    const fullCaption = caption
 
     await deleteSwapMessage(ctx)
     await ctx.replyWithPhoto({ source: qrBuffer }, { caption: fullCaption, parse_mode: 'Markdown' })

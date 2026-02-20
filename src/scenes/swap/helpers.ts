@@ -76,6 +76,18 @@ export function searchResultsKeyboard(assets: Asset[], S: Strings, disabledIdent
 }
 
 /**
+ * Shorten an address for display: 0xabcde...12345
+ * Keeps prefix (0x, bc1, etc.) + 5 chars ... last 5 chars.
+ */
+export function shortenAddress(address: string): string {
+  if (address.length <= 16) return address
+  const prefix = address.match(/^(0x|bc1|bnb1|cosmos1)/i)?.[0] ?? ''
+  const start = prefix + address.slice(prefix.length, prefix.length + 5)
+  const end = address.slice(-5)
+  return `${start}...${end}`
+}
+
+/**
  * Smart number formatting: show ~4 significant digits in the decimal part,
  * reducing precision for larger numbers where decimals matter less.
  */
@@ -109,7 +121,7 @@ export function formatUsd(amount: number | null | undefined): string {
   } else {
     formatted = formatAmount(amount)
   }
-  return `(~$${formatted})`
+  return `· $${formatted}`
 }
 
 export function formatTime(seconds: number): string {
@@ -136,8 +148,9 @@ export function buildProgress(session: SwapSessionData, S: Strings): string {
         amountUsd: formatUsd(session.usdInputAmount)
       })
     )
-  if (session.destinationAddress) lines.push(t(S.progressDestination, { address: session.destinationAddress }))
-  if (session.refundAddress) lines.push(t(S.progressRefund, { address: session.refundAddress }))
+  if (session.destinationAddress)
+    lines.push(t(S.progressDestination, { address: shortenAddress(session.destinationAddress) }))
+  if (session.refundAddress) lines.push(t(S.progressRefund, { address: shortenAddress(session.refundAddress) }))
   return lines.join('\n')
 }
 

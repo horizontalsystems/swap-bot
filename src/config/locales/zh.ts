@@ -18,7 +18,7 @@ export const zh: Strings = {
 
   // --- Step 3: Enter amount ---
   enterAmount:
-    '🔄 *兑换*\n\n{progress}\n\n' + '💰 请输入要兑换的 *{asset}* 数量：\n' + '_提示：输入_ `$100` _可按美元金额兑换_',
+    '🔄 *兑换*\n\n{progress}\n\n' + '💰 请输入要兑换的 *{asset}* 数量：\n\n' + '_提示：输入_ `$100` _可按美元金额兑换_',
   invalidAmount:
     '🔄 *兑换*\n\n{progress}\n\n' +
     '⚠️ *金额无效。* 请输入有效的正数。\n\n' +
@@ -39,7 +39,7 @@ export const zh: Strings = {
   noRoutes: '🔄 *兑换*\n\n{progress}\n\n❌ 此交易对没有可用的兑换路线。',
   allProvidersFailed: '🔄 *兑换*\n\n{progress}\n\n❌ 没有提供商能够完成此兑换。请尝试其他金额或交易对。',
   quotesHeader: '🔄 *兑换*\n\n{progress}\n\n' + '📊 *{count} 个报价可用：*\n\n{routes}\n\n' + '_请选择以下路线：_',
-  quoteLine: '*{index}.* {provider}\n      _{amount} {ticker}_ {receiveUsd}  ·  🕐 {time}',
+  quoteLine: '*{index}. {provider}* — 💵 {amount} {ticker} {receiveUsd} — 🕐 {time}',
   quoteError: '🔄 *兑换*\n\n{progress}\n\n❌ *获取报价失败：* {error}',
 
   // --- Swap summary (confirm screen) ---
@@ -48,8 +48,8 @@ export const zh: Strings = {
     '📤 *发送：* {sendAmount} {sendAsset} {sendUsd}\n' +
     '📥 *接收：* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
     '🛡 *最少接收：* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
-    '📍 *接收地址：*\n`{destination}`\n' +
-    '🔙 *退款地址：*\n`{refund}`\n\n' +
+    '📍 *接收地址：* {destination}\n' +
+    '🔙 *退款地址：* {refund}\n\n' +
     '🏷 *提供商：* {provider}\n' +
     '🕐 *预计时间：* {time}\n\n' +
     '_确认此兑换？_',
@@ -59,12 +59,16 @@ export const zh: Strings = {
   swapConfirmed:
     '✅ *兑换已准备！*\n\n' +
     '📤 *发送：* {sendAmount} {sendAsset} {sendUsd}\n' +
-    '📥 *接收：* ~{receiveAmount} {receiveAsset} {receiveUsd}\n\n' +
-    '📍 *发送至：*\n`{inboundAddress}`\n\n' +
+    '📥 *接收：* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    '🛡 *最少接收：* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '📍 *接收地址：* {destination}\n' +
+    '🔙 *退款地址：* {refund}\n\n' +
     '🏷 *提供商：* {provider}\n' +
-    '🕐 *预计时间：* {time}\n' +
-    '⏳ *过期时间：* {expiration}\n\n' +
-    '📱 扫描二维码发送 *{sendAmount} {sendAsset}* {sendUsd}',
+    '🕐 *预计时间：* {time}\n\n' +
+    '==============================\n\n' +
+    '📍 请准确发送 `{sendAmount}` {sendAsset} 至：\n\n`{inboundAddress}`\n\n' +
+    '📱 或在钱包应用中扫描二维码发送\n\n' +
+    '_请注意：此兑换将在 {expiration} 后过期_',
 
   // --- Swap errors ---
   preparingSwap:
@@ -72,8 +76,8 @@ export const zh: Strings = {
     '📤 *发送：* {sendAmount} {sendAsset} {sendUsd}\n' +
     '📥 *接收：* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
     '🛡 *最少接收：* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
-    '📍 *接收地址：*\n`{destination}`\n' +
-    '🔙 *退款地址：*\n`{refund}`\n\n' +
+    '📍 *接收地址：* {destination}\n' +
+    '🔙 *退款地址：* {refund}\n\n' +
     '🏷 *提供商：* {provider}\n' +
     '🕐 *预计时间：* {time}\n\n' +
     '⏳ _正在准备兑换..._',
@@ -100,6 +104,6 @@ export const zh: Strings = {
   progressSend: '📤 发送：*{asset}*',
   progressReceive: '📥 接收：*{asset}*',
   progressAmount: '🔢 数量：*{amount} {asset}* {amountUsd}',
-  progressDestination: '📍 接收地址：`{address}`',
-  progressRefund: '🔙 退款地址：`{address}`'
+  progressDestination: '📍 接收地址：{address}',
+  progressRefund: '🔙 退款地址：{address}'
 }

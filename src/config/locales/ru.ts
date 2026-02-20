@@ -19,12 +19,12 @@ export const ru: Strings = {
   // --- Step 3: Enter amount ---
   enterAmount:
     '🔄 *Обмен*\n\n{progress}\n\n' +
-    '💰 Введите количество *{asset}* для обмена:\n' +
+    '💰 Введите количество *{asset}* для обмена:\n\n' +
     '_Подсказка: введите_ `$100` _для суммы в USD_',
   invalidAmount:
     '🔄 *Обмен*\n\n{progress}\n\n' +
     '⚠️ *Неверная сумма.* Введите положительное число.\n\n' +
-    '💰 Введите количество *{asset}* для обмена:\n' +
+    '💰 Введите количество *{asset}* для обмена:\n\n' +
     '_Подсказка: введите_ `$100` _для суммы в USD_',
 
   // --- Step 4: Destination address ---
@@ -45,7 +45,7 @@ export const ru: Strings = {
     '🔄 *Обмен*\n\n{progress}\n\n❌ Ни один провайдер не смог выполнить обмен. Попробуйте другую сумму или пару.',
   quotesHeader:
     '🔄 *Обмен*\n\n{progress}\n\n' + '📊 *{count} Котировок доступно:*\n\n{routes}\n\n' + '_Выберите маршрут ниже:_',
-  quoteLine: '*{index}.* {provider}\n      _{amount} {ticker}_ {receiveUsd}  ·  🕐 {time}',
+  quoteLine: '*{index}. {provider}* — 💵 {amount} {ticker} {receiveUsd} — 🕐 {time}',
   quoteError: '🔄 *Обмен*\n\n{progress}\n\n❌ *Ошибка получения котировки:* {error}',
 
   // --- Swap summary (confirm screen) ---
@@ -54,8 +54,8 @@ export const ru: Strings = {
     '📤 *Отправка:* {sendAmount} {sendAsset} {sendUsd}\n' +
     '📥 *Получение:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
     '🛡 *Мин. получение:* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
-    '📍 *Адрес назначения:*\n`{destination}`\n' +
-    '🔙 *Адрес возврата:*\n`{refund}`\n\n' +
+    '📍 *Назначение:* {destination}\n' +
+    '🔙 *Возврат:* {refund}\n\n' +
     '🏷 *Провайдер:* {provider}\n' +
     '🕐 *Ожид. время:* {time}\n\n' +
     '_Подтвердить обмен?_',
@@ -65,12 +65,16 @@ export const ru: Strings = {
   swapConfirmed:
     '✅ *Обмен подготовлен!*\n\n' +
     '📤 *Отправка:* {sendAmount} {sendAsset} {sendUsd}\n' +
-    '📥 *Получение:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n\n' +
-    '📍 *Отправить на:*\n`{inboundAddress}`\n\n' +
+    '📥 *Получение:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    '🛡 *Мин. получение:* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '📍 *Назначение:* {destination}\n' +
+    '🔙 *Возврат:* {refund}\n\n' +
     '🏷 *Провайдер:* {provider}\n' +
-    '🕐 *Ожид. время:* {time}\n' +
-    '⏳ *Истекает через:* {expiration}\n\n' +
-    '📱 Отсканируйте QR для отправки *{sendAmount} {sendAsset}* {sendUsd}',
+    '🕐 *Ожид. время:* {time}\n\n' +
+    '==============================\n\n' +
+    '📍 Отправьте ровно `{sendAmount}` {sendAsset} на:\n\n`{inboundAddress}`\n\n' +
+    '📱 Или отсканируйте QR в кошельке для отправки\n\n' +
+    '_Обратите внимание: обмен истекает через {expiration}_',
 
   // --- Swap errors ---
   preparingSwap:
@@ -78,8 +82,8 @@ export const ru: Strings = {
     '📤 *Отправка:* {sendAmount} {sendAsset} {sendUsd}\n' +
     '📥 *Получение:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
     '🛡 *Мин. получение:* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
-    '📍 *Адрес назначения:*\n`{destination}`\n' +
-    '🔙 *Адрес возврата:*\n`{refund}`\n\n' +
+    '📍 *Назначение:* {destination}\n' +
+    '🔙 *Возврат:* {refund}\n\n' +
     '🏷 *Провайдер:* {provider}\n' +
     '🕐 *Ожид. время:* {time}\n\n' +
     '⏳ _Подготовка обмена..._',
@@ -107,6 +111,6 @@ export const ru: Strings = {
   progressSend: '📤 Отправка: *{asset}*',
   progressReceive: '📥 Получение: *{asset}*',
   progressAmount: '🔢 Сумма: *{amount} {asset}* {amountUsd}',
-  progressDestination: '📍 Назначение: `{address}`',
-  progressRefund: '🔙 Возврат: `{address}`'
+  progressDestination: '📍 Назначение: {address}',
+  progressRefund: '🔙 Возврат: {address}'
 }

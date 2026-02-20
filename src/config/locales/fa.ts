@@ -19,12 +19,12 @@ export const fa: Strings = {
   // --- Step 3: Enter amount ---
   enterAmount:
     '🔄 *تبادل*\n\n{progress}\n\n' +
-    '💰 مقدار *{asset}* را برای تبادل وارد کنید:\n' +
+    '💰 مقدار *{asset}* را برای تبادل وارد کنید:\n\n' +
     '_راهنما: برای وارد کردن مبلغ دلاری_ `$100` _تایپ کنید_',
   invalidAmount:
     '🔄 *تبادل*\n\n{progress}\n\n' +
     '⚠️ *مقدار نامعتبر.* لطفاً یک عدد مثبت وارد کنید.\n\n' +
-    '💰 مقدار *{asset}* را برای تبادل وارد کنید:\n' +
+    '💰 مقدار *{asset}* را برای تبادل وارد کنید:\n\n' +
     '_راهنما: برای وارد کردن مبلغ دلاری_ `$100` _تایپ کنید_',
 
   // --- Step 4: Destination address ---
@@ -44,7 +44,7 @@ export const fa: Strings = {
   allProvidersFailed:
     '🔄 *تبادل*\n\n{progress}\n\n❌ هیچ ارائه‌دهنده‌ای نتوانست این تبادل را انجام دهد. مبلغ یا جفت دیگری را امتحان کنید.',
   quotesHeader: '🔄 *تبادل*\n\n{progress}\n\n' + '📊 *{count} قیمت موجود:*\n\n{routes}\n\n' + '_یک مسیر انتخاب کنید:_',
-  quoteLine: '*{index}.* {provider}\n      _{amount} {ticker}_ {receiveUsd}  ·  🕐 {time}',
+  quoteLine: '*{index}. {provider}* — 💵 {amount} {ticker} {receiveUsd} — 🕐 {time}',
   quoteError: '🔄 *تبادل*\n\n{progress}\n\n❌ *خطا در دریافت قیمت:* {error}',
 
   // --- Swap summary (confirm screen) ---
@@ -53,8 +53,8 @@ export const fa: Strings = {
     '📤 *ارسال:* {sendAmount} {sendAsset} {sendUsd}\n' +
     '📥 *دریافت:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
     '🛡 *حداقل دریافت:* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
-    '📍 *آدرس مقصد:*\n`{destination}`\n' +
-    '🔙 *آدرس بازگشت:*\n`{refund}`\n\n' +
+    '📍 *مقصد:* {destination}\n' +
+    '🔙 *بازگشت:* {refund}\n\n' +
     '🏷 *ارائه‌دهنده:* {provider}\n' +
     '🕐 *زمان تخمینی:* {time}\n\n' +
     '_این تبادل را تأیید می‌کنید؟_',
@@ -64,12 +64,16 @@ export const fa: Strings = {
   swapConfirmed:
     '✅ *تبادل آماده شد!*\n\n' +
     '📤 *ارسال:* {sendAmount} {sendAsset} {sendUsd}\n' +
-    '📥 *دریافت:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n\n' +
-    '📍 *ارسال به:*\n`{inboundAddress}`\n\n' +
+    '📥 *دریافت:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    '🛡 *حداقل دریافت:* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '📍 *مقصد:* {destination}\n' +
+    '🔙 *بازگشت:* {refund}\n\n' +
     '🏷 *ارائه‌دهنده:* {provider}\n' +
-    '🕐 *زمان تخمینی:* {time}\n' +
-    '⏳ *انقضا:* {expiration}\n\n' +
-    '📱 کد QR را برای ارسال *{sendAmount} {sendAsset}* {sendUsd} اسکن کنید',
+    '🕐 *زمان تخمینی:* {time}\n\n' +
+    '==============================\n\n' +
+    '📍 دقیقاً `{sendAmount}` {sendAsset} را به آدرس زیر ارسال کنید:\n\n`{inboundAddress}`\n\n' +
+    '📱 یا کد QR را در کیف پول اسکن کنید\n\n' +
+    '_توجه: این تبادل پس از {expiration} منقضی می‌شود_',
 
   // --- Swap errors ---
   preparingSwap:
@@ -77,8 +81,8 @@ export const fa: Strings = {
     '📤 *ارسال:* {sendAmount} {sendAsset} {sendUsd}\n' +
     '📥 *دریافت:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
     '🛡 *حداقل دریافت:* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
-    '📍 *آدرس مقصد:*\n`{destination}`\n' +
-    '🔙 *آدرس بازگشت:*\n`{refund}`\n\n' +
+    '📍 *مقصد:* {destination}\n' +
+    '🔙 *بازگشت:* {refund}\n\n' +
     '🏷 *ارائه‌دهنده:* {provider}\n' +
     '🕐 *زمان تخمینی:* {time}\n\n' +
     '⏳ _در حال آماده‌سازی تبادل..._',
@@ -108,6 +112,6 @@ export const fa: Strings = {
   progressSend: '📤 ارسال: *{asset}*',
   progressReceive: '📥 دریافت: *{asset}*',
   progressAmount: '🔢 مقدار: *{amount} {asset}* {amountUsd}',
-  progressDestination: '📍 مقصد: `{address}`',
-  progressRefund: '🔙 بازگشت: `{address}`'
+  progressDestination: '📍 مقصد: {address}',
+  progressRefund: '🔙 بازگشت: {address}'
 }
