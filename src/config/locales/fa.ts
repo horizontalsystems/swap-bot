@@ -73,7 +73,8 @@ export const fa: Strings = {
     '==============================\n\n' +
     '📍 دقیقاً `{sendAmount}` {sendAsset} را به آدرس زیر ارسال کنید:\n\n`{inboundAddress}`\n\n' +
     '📱 یا کد QR را در کیف پول اسکن کنید\n\n' +
-    '_توجه: این تبادل پس از {expiration} منقضی می‌شود_',
+    '_توجه: این تبادل پس از {expiration} منقضی می‌شود_\n\n' +
+    '{trackLink}',
 
   // --- Swap errors ---
   preparingSwap:

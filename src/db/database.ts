@@ -29,7 +29,8 @@ function initSchema(): void {
       chain TEXT,
       address TEXT,
       providers TEXT,
-      coingecko_id TEXT
+      coingecko_id TEXT,
+      chain_id TEXT
     );
   `)
 

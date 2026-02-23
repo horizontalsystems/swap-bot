@@ -13,6 +13,7 @@ import {
   assetKeyboard,
   backCancelRow,
   buildProgress,
+  buildTrackUrl,
   clearSearchCancelRow,
   deleteSwapMessage,
   deleteUserMessage,
@@ -612,6 +613,14 @@ swapWizard.action('confirm_swap', async ctx => {
 
     const confirmMinReceiveUsd = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmountMaxSlippage) : null
 
+    const provider = route.providers[0]
+    const trackUrl = buildTrackUrl(provider, {
+      inboundAddr: inboundAddr,
+      chainId: assetIn.chainId,
+      providerSwapId: route.providerSwapId
+    })
+    const trackLink = trackUrl ? `[🔍 Track Swap](${trackUrl})` : ''
+
     const caption = t(S.swapConfirmed, {
       sendAmount: sendAmountDisplay,
       sendAsset: assetCaption(assetIn),
@@ -626,7 +635,8 @@ swapWizard.action('confirm_swap', async ctx => {
       inboundAddress: inboundAddr ?? '',
       provider: route.providers.map(p => providerName(p)).join(', '),
       time: formatTime(route.estimatedTime.total),
-      expiration: expiresIn != null ? formatTime(expiresIn) : 'N/A'
+      expiration: expiresIn != null ? formatTime(expiresIn) : 'N/A',
+      trackLink
     })
 
     // const paymentUri = buildPaymentUri(assetIn.chain, inboundAddr!, sendAmount, assetIn.address)

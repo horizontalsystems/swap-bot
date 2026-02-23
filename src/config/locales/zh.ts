@@ -68,7 +68,8 @@ export const zh: Strings = {
     '==============================\n\n' +
     '📍 请准确发送 `{sendAmount}` {sendAsset} 至：\n\n`{inboundAddress}`\n\n' +
     '📱 或在钱包应用中扫描二维码发送\n\n' +
-    '_请注意：此兑换将在 {expiration} 后过期_',
+    '_请注意：此兑换将在 {expiration} 后过期_\n\n' +
+    '{trackLink}',
 
   // --- Swap errors ---
   preparingSwap:

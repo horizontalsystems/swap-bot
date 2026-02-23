@@ -25,6 +25,7 @@ export interface Asset {
   chain: string // e.g. "BTC", "ETH"
   address: string | null // contract address, null for native tokens
   coingeckoId: string | null // CoinGecko UID for price lookups
+  chainId: string | null // e.g. "bitcoin", "ethereum" — used for tracking URLs
 }
 
 // --- Quote types ---
@@ -57,6 +58,7 @@ export interface QuoteRoute {
   meta: Record<string, unknown>
   memo?: string
   qrCodeDataURL?: string
+  providerSwapId?: string
 }
 
 export interface ProviderError {

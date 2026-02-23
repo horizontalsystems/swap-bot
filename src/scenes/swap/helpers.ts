@@ -154,6 +154,23 @@ export function buildProgress(session: SwapSessionData, S: Strings): string {
   return lines.join('\n')
 }
 
+export function buildTrackUrl(
+  provider: string,
+  opts: { inboundAddr?: string; chainId?: string | null; providerSwapId?: string }
+): string | null {
+  const base = 'https://swap.unstoppable.money/track'
+  if (provider === 'THORCHAIN') {
+    if (!opts.inboundAddr || !opts.chainId) return null
+    return `${base}?provider=THORCHAIN&depositAddress=${encodeURIComponent(opts.inboundAddr)}&chainId=${encodeURIComponent(opts.chainId)}`
+  }
+  if (provider === 'NEAR') {
+    if (!opts.inboundAddr) return null
+    return `${base}?provider=NEAR&depositAddress=${encodeURIComponent(opts.inboundAddr)}`
+  }
+  if (!opts.providerSwapId) return null
+  return `${base}?provider=${encodeURIComponent(provider)}&providerSwapId=${encodeURIComponent(opts.providerSwapId)}`
+}
+
 export async function editSwapMessage(ctx: SwapContext, text: string, extra?: Record<string, unknown>) {
   const messageId = ctx.scene.session.swapMessageId
   if (!messageId || !ctx.chat) return

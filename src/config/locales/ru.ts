@@ -74,7 +74,8 @@ export const ru: Strings = {
     '==============================\n\n' +
     '📍 Отправьте ровно `{sendAmount}` {sendAsset} на:\n\n`{inboundAddress}`\n\n' +
     '📱 Или отсканируйте QR в кошельке для отправки\n\n' +
-    '_Обратите внимание: обмен истекает через {expiration}_',
+    '_Обратите внимание: обмен истекает через {expiration}_\n\n' +
+    '{trackLink}',
 
   // --- Swap errors ---
   preparingSwap:

@@ -74,7 +74,8 @@ export const en = {
     '==============================\n\n' +
     '📍 Send exactly `{sendAmount}` {sendAsset} to:\n\n`{inboundAddress}`\n\n' +
     '📱 Or scan QR in your wallet app to send funds\n\n' +
-    '_Please note that this swap expires in {expiration}_',
+    '_Please note that this swap expires in {expiration}_\n\n' +
+    '{trackLink}',
 
   // --- Swap errors ---
   preparingSwap:
