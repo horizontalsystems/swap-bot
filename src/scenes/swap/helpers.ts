@@ -107,7 +107,7 @@ export function formatAmount(value: number | string): string {
   // For numbers < 1: find leading zeros then show 4 significant digits
   const leadingZeros = -Math.floor(Math.log10(abs)) - 1
   const decimals = leadingZeros + 4
-  return num.toFixed(Math.min(decimals, 20))
+  return num.toLocaleString('en-US', { maximumFractionDigits: Math.min(decimals, 20) })
 }
 
 export function formatUsd(amount: number | null | undefined): string {

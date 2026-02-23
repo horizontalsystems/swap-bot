@@ -557,6 +557,7 @@ swapWizard.action('confirm_swap', async ctx => {
     let qrDataURL: string | undefined
     let inboundAddr: string | undefined
     let sendAmount: number = amount
+    let sendAmountDisplay: string = formatAmount(amount)
     let expiresIn: number | undefined
 
     if (isThorchain) {
@@ -586,6 +587,7 @@ swapWizard.action('confirm_swap', async ctx => {
       qrDataURL = preflightData.data.qr_code_data_url
       inboundAddr = preflightData.data.inbound_address
       sendAmount = parseFloat(registerData.suggested_in_asset_amount)
+      sendAmountDisplay = registerData.suggested_in_asset_amount
       expiresIn = preflightData.data.seconds_remaining
       console.log('[Swap] Memoless flow complete — inbound:', inboundAddr, 'sendAmount:', sendAmount)
     } else {
@@ -611,7 +613,7 @@ swapWizard.action('confirm_swap', async ctx => {
     const confirmMinReceiveUsd = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmountMaxSlippage) : null
 
     const caption = t(S.swapConfirmed, {
-      sendAmount: formatAmount(sendAmount),
+      sendAmount: sendAmountDisplay,
       sendAsset: assetCaption(assetIn),
       sendUsd: formatUsd(confirmSendUsd),
       receiveAmount: formatAmount(route.expectedBuyAmount),
@@ -629,10 +631,10 @@ swapWizard.action('confirm_swap', async ctx => {
 
     // const paymentUri = buildPaymentUri(assetIn.chain, inboundAddr!, sendAmount, assetIn.address)
     // const fullCaption = paymentUri ? caption + `\n\n${S.openInWallet}:\n\`${paymentUri}\`` : caption
-    const fullCaption = caption
+    // const fullCaption = caption
 
     await deleteSwapMessage(ctx)
-    await ctx.replyWithPhoto({ source: qrBuffer }, { caption: fullCaption, parse_mode: 'Markdown' })
+    await ctx.replyWithPhoto({ source: qrBuffer }, { caption: caption, parse_mode: 'Markdown' })
 
     return ctx.scene.leave()
   } catch (error) {
