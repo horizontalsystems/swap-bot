@@ -25,6 +25,7 @@ import {
   searchResultsKeyboard,
   shortenAddress
 } from './helpers'
+import { buildPaymentUri } from '../../utils/paymentUri'
 
 // --- Helpers ---
 
@@ -639,12 +640,12 @@ swapWizard.action('confirm_swap', async ctx => {
       trackLink
     })
 
-    // const paymentUri = buildPaymentUri(assetIn.chain, inboundAddr!, sendAmount, assetIn.address)
-    // const fullCaption = paymentUri ? caption + `\n\n${S.openInWallet}:\n\`${paymentUri}\`` : caption
-    // const fullCaption = caption
+    const paymentUri = buildPaymentUri(assetIn.chain, inboundAddr!, sendAmount, assetIn.address)
+    const paymentLink = paymentUri ? `https://swap.unstoppable.money/pay?uri=${paymentUri}` : null
+    const fullCaption = paymentLink ? caption + `\n\n[${S.openInWallet}](${paymentLink})` : caption
 
     await deleteSwapMessage(ctx)
-    await ctx.replyWithPhoto({ source: qrBuffer }, { caption: caption, parse_mode: 'Markdown' })
+    await ctx.replyWithPhoto({ source: qrBuffer }, { caption: fullCaption, parse_mode: 'Markdown' })
 
     return ctx.scene.leave()
   } catch (error) {
