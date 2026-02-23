@@ -27,6 +27,43 @@ import {
 
 // --- Helpers ---
 
+/** Detect /start or /swap command in a text message */
+function isRestartCommand(ctx: SwapContext): boolean {
+  if (!ctx.has(message('text'))) return false
+  return /^\/(start|swap)(@\w+)?$/i.test(ctx.message.text.trim())
+}
+
+/** Reset wizard and show fresh asset selection (used when /start or /swap sent mid-wizard) */
+async function restartWizard(ctx: SwapContext) {
+  await deleteSwapMessage(ctx)
+
+  const S = s(ctx.from?.language_code)
+  ctx.scene.session.assetIn = undefined
+  ctx.scene.session.assetOut = undefined
+  ctx.scene.session.amount = undefined
+  ctx.scene.session.usdInputAmount = undefined
+  ctx.scene.session.destinationAddress = undefined
+  ctx.scene.session.refundAddress = undefined
+  ctx.scene.session.routes = undefined
+  ctx.scene.session.quote = undefined
+  ctx.scene.session.searchResults = undefined
+
+  const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
+
+  if (featuredAssets.length === 0) {
+    await ctx.reply(S.noAssetsAvailable)
+    return ctx.scene.leave()
+  }
+
+  const msg = await ctx.reply(S.selectSendAsset, {
+    parse_mode: 'Markdown',
+    ...assetKeyboard(featuredAssets, S)
+  })
+
+  ctx.scene.session.swapMessageId = msg.message_id
+  ctx.wizard.selectStep(1)
+}
+
 async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
   const S = s(ctx.from?.language_code)
   const { assetIn, assetOut, amount, destinationAddress } = ctx.scene.session
@@ -134,6 +171,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
   // Step 1: Waiting for assetIn callback or search text
   async ctx => {
+    if (isRestartCommand(ctx)) return restartWizard(ctx)
     const S = s(ctx.from?.language_code)
     if (ctx.has(message('text'))) {
       await deleteUserMessage(ctx)
@@ -156,6 +194,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
   // Step 2: Waiting for assetOut callback or search text
   async ctx => {
+    if (isRestartCommand(ctx)) return restartWizard(ctx)
     const S = s(ctx.from?.language_code)
     if (ctx.has(message('text'))) {
       await deleteUserMessage(ctx)
@@ -179,6 +218,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
   // Step 3: Handle amount input
   async ctx => {
+    if (isRestartCommand(ctx)) return restartWizard(ctx)
     if (!ctx.has(message('text'))) return
 
     const S = s(ctx.from?.language_code)
@@ -235,6 +275,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
   // Step 4: Handle destination address
   async ctx => {
+    if (isRestartCommand(ctx)) return restartWizard(ctx)
     if (!ctx.has(message('text'))) return
 
     const S = s(ctx.from?.language_code)
@@ -265,6 +306,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
   // Step 5: Handle refund address, fetch quotes, show route options
   async ctx => {
+    if (isRestartCommand(ctx)) return restartWizard(ctx)
     if (!ctx.has(message('text'))) return
 
     const S = s(ctx.from?.language_code)
@@ -299,11 +341,13 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
   // Step 6: Waiting for route selection
   async ctx => {
+    if (isRestartCommand(ctx)) return restartWizard(ctx)
     await deleteUserMessage(ctx)
   },
 
   // Step 7: Waiting for confirm/cancel
   async ctx => {
+    if (isRestartCommand(ctx)) return restartWizard(ctx)
     await deleteUserMessage(ctx)
   }
 )
