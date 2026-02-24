@@ -47,17 +47,21 @@ async function main() {
   // Start periodic sync (every hour)
   startPeriodicSync()
 
-  // Set bot menu commands
-  await bot.telegram.setMyCommands([{ command: 'swap', description: 'Start a new swap' }])
-  await bot.telegram.setMyCommands([{ command: 'swap', description: 'Начать новый обмен' }], {
-    language_code: 'ru'
-  })
-  await bot.telegram.setMyCommands([{ command: 'swap', description: '开始新兑换' }], {
-    language_code: 'zh'
-  })
-  await bot.telegram.setMyCommands([{ command: 'swap', description: 'شروع تبادل جدید' }], {
-    language_code: 'fa'
-  })
+  // Set bot menu commands (non-fatal — skip if rate-limited)
+  try {
+    await bot.telegram.setMyCommands([{ command: 'swap', description: 'Start a new swap' }])
+    await bot.telegram.setMyCommands([{ command: 'swap', description: 'Начать новый обмен' }], {
+      language_code: 'ru'
+    })
+    await bot.telegram.setMyCommands([{ command: 'swap', description: '开始新兑换' }], {
+      language_code: 'zh'
+    })
+    await bot.telegram.setMyCommands([{ command: 'swap', description: 'شروع تبادل جدید' }], {
+      language_code: 'fa'
+    })
+  } catch (err) {
+    console.warn('[Bot] setMyCommands failed (rate-limited?), skipping:', (err as Error).message)
+  }
 
   // Launch bot
   bot.launch()

@@ -129,7 +129,7 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
 
   await editSwapMessage(
     ctx,
-    t(S.quotesHeader, { progress, count: quoteResponse.routes.length, routes: routeLines.join('\n\n') }),
+    t(S.quotesHeader, { progress, count: quoteResponse.routes.length, routes: routeLines.join('\n') }),
     { ...Markup.inlineKeyboard(buttonRows) }
   )
 
@@ -614,13 +614,13 @@ swapWizard.action('confirm_swap', async ctx => {
 
     const confirmMinReceiveUsd = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmountMaxSlippage) : null
 
+    const warning = isThorchain ? `\n\n${S.amountWarning}` : ''
+
+    const links: string[] = []
+
     const paymentUri = buildPaymentUri(assetIn.chain, inboundAddr!, sendAmount, assetIn.address)
     const paymentLink = paymentUri ? `https://swap.unstoppable.money/pay?uri=${paymentUri}` : null
-    const orOpenWalletApp = paymentLink
-      ? `${t(S.orOpenWalletApp, { openWalletApp: `[${S.openWalletApp}](${paymentLink})` })}\n\n`
-      : ''
-
-    const warning = isThorchain ? `${S.amountWarning}\n\n====================\n\n` : ''
+    if (paymentLink) links.push(`📲 [${S.openWalletApp}](${paymentLink})`)
 
     const provider = route.providers[0]
     const trackUrl = buildTrackUrl(provider, {
@@ -628,7 +628,7 @@ swapWizard.action('confirm_swap', async ctx => {
       chainId: assetIn.chainId,
       providerSwapId: route.providerSwapId
     })
-    const trackLink = trackUrl ? `🔍 [${S.trackSwapHere}](${trackUrl})\n\n====================` : ''
+    if (trackUrl) links.push(`🔍 [${S.trackSwap}](${trackUrl})`)
 
     const caption = t(S.swapConfirmed, {
       sendAmount: sendAmountDisplay,
@@ -645,9 +645,8 @@ swapWizard.action('confirm_swap', async ctx => {
       provider: route.providers.map(p => providerName(p)).join(', '),
       time: formatTime(route.estimatedTime.total),
       expiration: expiresIn != null ? formatTime(expiresIn) : 'N/A',
-      orOpenWalletApp,
       warning,
-      trackLink
+      links: links.length ? `\n\n${links.join(' · ')}` : ''
     })
 
     await deleteSwapMessage(ctx)

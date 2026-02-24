@@ -121,7 +121,7 @@ export function formatUsd(amount: number | null | undefined): string {
   } else {
     formatted = formatAmount(amount)
   }
-  return `· $${formatted}`
+  return ` ($${formatted})`
 }
 
 export function formatTime(seconds: number): string {
@@ -138,8 +138,12 @@ export function formatTime(seconds: number): string {
 
 export function buildProgress(session: SwapSessionData, S: Strings): string {
   const lines: string[] = []
-  if (session.assetIn) lines.push(t(S.progressSend, { asset: assetCaption(session.assetIn) }))
-  if (session.assetOut) lines.push(t(S.progressReceive, { asset: assetCaption(session.assetOut) }))
+  if (session.assetIn && session.assetOut) {
+    lines.push(t(S.progressSend, { asset: `${assetCaption(session.assetIn)} → ${assetCaption(session.assetOut)}` }))
+  } else {
+    if (session.assetIn) lines.push(t(S.progressSend, { asset: assetCaption(session.assetIn) }))
+    if (session.assetOut) lines.push(t(S.progressReceive, { asset: assetCaption(session.assetOut) }))
+  }
   if (session.amount != null && session.assetIn)
     lines.push(
       t(S.progressAmount, {
