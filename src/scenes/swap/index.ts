@@ -226,20 +226,31 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     const S = s(ctx.from?.language_code)
     await deleteUserMessage(ctx)
 
-    const text = ctx.message.text.trim()
+    const raw = ctx.message.text.trim()
     const asset = assetCaption(ctx.scene.session.assetIn!)
-    const isUsdInput = text.startsWith('$')
+
+    // Accept: $123, 123$, $123.45, 123.45$, 123, 123.45, .5, $.5
+    const isUsdInput = raw.startsWith('$') || raw.endsWith('$')
+    const numStr = raw.replace(/\$/g, '')
+
+    if (!/^\d*\.?\d+$/.test(numStr)) {
+      const progress = buildProgress(ctx.scene.session, S)
+      await editSwapMessage(ctx, t(S.invalidAmount, { progress, asset }), {
+        ...Markup.inlineKeyboard([backCancelRow(S)])
+      })
+      return
+    }
+
+    const parsedAmount = parseFloat(numStr)
+    if (parsedAmount <= 0) {
+      const progress = buildProgress(ctx.scene.session, S)
+      await editSwapMessage(ctx, t(S.invalidAmount, { progress, asset }), {
+        ...Markup.inlineKeyboard([backCancelRow(S)])
+      })
+      return
+    }
 
     if (isUsdInput) {
-      const usdAmount = parseFloat(text.slice(1))
-      if (isNaN(usdAmount) || usdAmount <= 0) {
-        const progress = buildProgress(ctx.scene.session, S)
-        await editSwapMessage(ctx, t(S.invalidAmount, { progress, asset }), {
-          ...Markup.inlineKeyboard([backCancelRow(S)])
-        })
-        return
-      }
-
       const price = await getAssetPrice(ctx.scene.session.assetIn!.coingeckoId)
       if (price == null) {
         const progress = buildProgress(ctx.scene.session, S)
@@ -249,21 +260,12 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
         return
       }
 
-      ctx.scene.session.amount = usdAmount / price
-      ctx.scene.session.usdInputAmount = usdAmount
+      ctx.scene.session.amount = parsedAmount / price
+      ctx.scene.session.usdInputAmount = parsedAmount
     } else {
-      const amount = parseFloat(text)
-      if (isNaN(amount) || amount <= 0) {
-        const progress = buildProgress(ctx.scene.session, S)
-        await editSwapMessage(ctx, t(S.invalidAmount, { progress, asset }), {
-          ...Markup.inlineKeyboard([backCancelRow(S)])
-        })
-        return
-      }
-
-      ctx.scene.session.amount = amount
+      ctx.scene.session.amount = parsedAmount
       const price = await getAssetPrice(ctx.scene.session.assetIn!.coingeckoId)
-      ctx.scene.session.usdInputAmount = price != null ? amount * price : undefined
+      ctx.scene.session.usdInputAmount = price != null ? parsedAmount * price : undefined
     }
 
     const progress = buildProgress(ctx.scene.session, S)
