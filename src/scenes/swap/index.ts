@@ -402,9 +402,24 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
       return
     }
 
+    const providers = getProvidersForPair(ctx.scene.session.assetIn!.identifier, identifier).filter(p =>
+      ALLOWED_PROVIDERS.includes(p)
+    )
     ctx.scene.session.assetOut = asset
-    await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
     if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
+
+    if (providers.length === 0) {
+      await ctx.answerCbQuery()
+      const progress = buildProgress(ctx.scene.session, S)
+      await ctx.editMessageText(t(S.noProviders, { progress }), {
+        parse_mode: 'Markdown',
+        ...Markup.inlineKeyboard([backCancelRow(S)])
+      })
+      ctx.wizard.selectStep(3)
+      return
+    }
+
+    await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
 
     const progress = buildProgress(ctx.scene.session, S)
     await ctx.editMessageText(t(S.enterAmount, { progress, asset: assetCaption(ctx.scene.session.assetIn!) }), {
@@ -444,10 +459,26 @@ swapWizard.action(/^sselect_(\d+)$/, async ctx => {
   }
 
   if (ctx.wizard.cursor === 2) {
+    const providers = getProvidersForPair(ctx.scene.session.assetIn!.identifier, asset.identifier).filter(p =>
+      ALLOWED_PROVIDERS.includes(p)
+    )
+
     ctx.scene.session.assetOut = asset
     ctx.scene.session.searchResults = undefined
-    await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
     if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
+
+    if (providers.length === 0) {
+      await ctx.answerCbQuery()
+      const progress = buildProgress(ctx.scene.session, S)
+      await ctx.editMessageText(t(S.noProviders, { progress }), {
+        parse_mode: 'Markdown',
+        ...Markup.inlineKeyboard([backCancelRow(S)])
+      })
+      ctx.wizard.selectStep(3)
+      return
+    }
+
+    await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
 
     const progress = buildProgress(ctx.scene.session, S)
     await ctx.editMessageText(t(S.enterAmount, { progress, asset: assetCaption(ctx.scene.session.assetIn!) }), {
