@@ -185,7 +185,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
           ...searchResultsKeyboard(results, S)
         })
       } else {
-        await editSwapMessage(ctx, t(S.searchNoResults, { progress: '' }), {
+        await editSwapMessage(ctx, t(S.searchNoResults, { progress: '' }).replace(/\n{3,}/g, '\n\n'), {
           ...Markup.inlineKeyboard([clearSearchCancelRow(S)])
         })
       }
@@ -614,13 +614,21 @@ swapWizard.action('confirm_swap', async ctx => {
 
     const confirmMinReceiveUsd = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmountMaxSlippage) : null
 
+    const paymentUri = buildPaymentUri(assetIn.chain, inboundAddr!, sendAmount, assetIn.address)
+    const paymentLink = paymentUri ? `https://swap.unstoppable.money/pay?uri=${paymentUri}` : null
+    const orOpenWalletApp = paymentLink
+      ? `${t(S.orOpenWalletApp, { openWalletApp: `[${S.openWalletApp}](${paymentLink})` })}\n\n`
+      : ''
+
+    const warning = isThorchain ? `${S.amountWarning}\n\n====================\n\n` : ''
+
     const provider = route.providers[0]
     const trackUrl = buildTrackUrl(provider, {
       inboundAddr: inboundAddr,
       chainId: assetIn.chainId,
       providerSwapId: route.providerSwapId
     })
-    const trackLink = trackUrl ? `[🔍 Track Swap](${trackUrl})` : ''
+    const trackLink = trackUrl ? `🔍 [${S.trackSwapHere}](${trackUrl})\n\n====================` : ''
 
     const caption = t(S.swapConfirmed, {
       sendAmount: sendAmountDisplay,
@@ -637,15 +645,13 @@ swapWizard.action('confirm_swap', async ctx => {
       provider: route.providers.map(p => providerName(p)).join(', '),
       time: formatTime(route.estimatedTime.total),
       expiration: expiresIn != null ? formatTime(expiresIn) : 'N/A',
+      orOpenWalletApp,
+      warning,
       trackLink
     })
 
-    const paymentUri = buildPaymentUri(assetIn.chain, inboundAddr!, sendAmount, assetIn.address)
-    const paymentLink = paymentUri ? `https://swap.unstoppable.money/pay?uri=${paymentUri}` : null
-    const fullCaption = paymentLink ? caption + `\n\n[${S.openInWallet}](${paymentLink})` : caption
-
     await deleteSwapMessage(ctx)
-    await ctx.replyWithPhoto({ source: qrBuffer }, { caption: fullCaption, parse_mode: 'Markdown' })
+    await ctx.replyWithPhoto({ source: qrBuffer }, { caption, parse_mode: 'Markdown' })
 
     return ctx.scene.leave()
   } catch (error) {

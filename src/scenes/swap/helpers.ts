@@ -38,7 +38,7 @@ export function assetCaption(asset: Asset) {
     return asset.ticker
   }
   const label = chainLabels[asset.chain] ?? asset.chain
-  return `${asset.ticker} (${label})`
+  return `${asset.ticker}-${label}`
 }
 
 export function assetKeyboard(assets: Asset[], S: Strings, disabledIdentifier?: string, showBack: boolean = false) {

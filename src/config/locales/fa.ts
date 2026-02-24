@@ -6,36 +6,45 @@ export const fa: Strings = {
   cancelSwap: '❌ لغو تبادل',
 
   // --- Search ---
-  clearSearch: '📋 پاک کردن جستجو',
-  searchNoResults: '🔄 *تبادل*\n\n{progress}\n\n❌ دارایی یافت نشد. عبارت دیگری را امتحان کنید.',
+  clearSearch: '🗑️ پاک کردن جستجو',
+  searchNoResults: '🔄 *تبادل*\n\n{progress}\n\n⚠️ دارایی یافت نشد. عبارت دیگری را امتحان کنید.',
 
   // --- Step 0: Select send asset ---
   noAssetsAvailable: '⚠️ هنوز دارایی در دسترس نیست. لیست توکن‌ها ممکن است در حال بارگذاری باشد. لطفاً بعداً تلاش کنید.',
-  selectSendAsset: '🔄 *تبادل*\n\nدارایی مورد نظر برای *ارسال* را انتخاب کنید یا جستجو کنید:',
+  selectSendAsset:
+    '🔄 *تبادل*\n\n🔘 دارایی مورد نظر برای *ارسال* را انتخاب کنید:\n\n_راهنما: کد یا نام ارز را برای جستجو وارد کنید_',
 
   // --- Step 1: Select receive asset ---
-  selectReceiveAsset: '🔄 *تبادل*\n\n{progress}\n\nدارایی مورد نظر برای *دریافت* را انتخاب کنید یا جستجو کنید:',
+  selectReceiveAsset:
+    '🔄 *تبادل*\n\n{progress}\n\n🔘 دارایی مورد نظر برای *دریافت* را انتخاب کنید:\n\n_راهنما: کد یا نام ارز را برای جستجو وارد کنید_',
 
   // --- Step 3: Enter amount ---
   enterAmount:
     '🔄 *تبادل*\n\n{progress}\n\n' +
-    '💰 مقدار *{asset}* را برای تبادل وارد کنید:\n\n' +
-    '_راهنما: برای وارد کردن مبلغ دلاری_ `$100` _تایپ کنید_',
+    '🔘 مقدار *{asset}* را برای تبادل وارد کنید:\n\n' +
+    '_راهنما: از علامت_ *$* _برای وارد کردن مبلغ دلاری استفاده کنید_',
   invalidAmount:
     '🔄 *تبادل*\n\n{progress}\n\n' +
-    '⚠️ *مقدار نامعتبر.* لطفاً یک عدد مثبت وارد کنید.\n\n' +
-    '💰 مقدار *{asset}* را برای تبادل وارد کنید:\n\n' +
-    '_راهنما: برای وارد کردن مبلغ دلاری_ `$100` _تایپ کنید_',
+    '🔘 مقدار *{asset}* را برای تبادل وارد کنید:\n\n' +
+    '_راهنما: از علامت_ *$* _برای وارد کردن مبلغ دلاری استفاده کنید_\n\n' +
+    '====================\n\n' +
+    '⚠️ *مقدار نامعتبر.* لطفاً یک عدد مثبت وارد کنید.',
 
   // --- Step 4: Destination address ---
-  enterDestination: '🔄 *تبادل*\n\n{progress}\n\n📍 آدرس _مقصد_ *{asset}* را وارد کنید:',
+  enterDestination: '🔄 *تبادل*\n\n{progress}\n\n🔘 آدرس _مقصد_ *{asset}* را وارد کنید:',
   invalidDestination:
-    '🔄 *تبادل*\n\n{progress}\n\n' + '⚠️ *آدرس نامعتبر.* {hint}\n\n' + '📍 آدرس _مقصد_ *{asset}* را وارد کنید:',
+    '🔄 *تبادل*\n\n{progress}\n\n' +
+    '🔘 آدرس _مقصد_ *{asset}* را وارد کنید:\n\n' +
+    '====================\n\n' +
+    '⚠️ *آدرس نامعتبر.* {hint}',
 
   // --- Step 5: Refund address ---
-  enterRefund: '🔄 *تبادل*\n\n{progress}\n\n🔙 آدرس _بازگشت_ *{asset}* را وارد کنید:',
+  enterRefund: '🔄 *تبادل*\n\n{progress}\n\n🔘 آدرس _بازگشت_ *{asset}* را وارد کنید:',
   invalidRefund:
-    '🔄 *تبادل*\n\n{progress}\n\n' + '⚠️ *آدرس نامعتبر.* {hint}\n\n' + '🔙 آدرس _بازگشت_ *{asset}* را وارد کنید:',
+    '🔄 *تبادل*\n\n{progress}\n\n' +
+    '🔘 آدرس _بازگشت_ *{asset}* را وارد کنید:\n\n' +
+    '====================\n\n' +
+    '⚠️ *آدرس نامعتبر.* {hint}',
 
   // --- Quotes ---
   fetchingQuotes: '🔄 *تبادل*\n\n{progress}\n\n⏳ _در حال دریافت قیمت‌ها..._',
@@ -43,49 +52,58 @@ export const fa: Strings = {
   noRoutes: '🔄 *تبادل*\n\n{progress}\n\n❌ مسیر تبادلی برای این جفت موجود نیست.',
   allProvidersFailed:
     '🔄 *تبادل*\n\n{progress}\n\n❌ هیچ ارائه‌دهنده‌ای نتوانست این تبادل را انجام دهد. مبلغ یا جفت دیگری را امتحان کنید.',
-  quotesHeader: '🔄 *تبادل*\n\n{progress}\n\n' + '📊 *{count} قیمت موجود:*\n\n{routes}\n\n' + '_یک مسیر انتخاب کنید:_',
-  quoteLine: '*{index}. {provider}* — 💵 {amount} {ticker} {receiveUsd} — 🕐 {time}',
+  quotesHeader: '🔄 *تبادل*\n\n{progress}\n\n' + '🔘 {count} قیمت موجود:\n\n{routes}\n\n' + '_یک مسیر انتخاب کنید:_',
+  quoteLine: '{index}. {provider} — *{amount} {ticker} {receiveUsd}* — 🕐 {time}',
   quoteError: '🔄 *تبادل*\n\n{progress}\n\n❌ *خطا در دریافت قیمت:* {error}',
 
   // --- Swap summary (confirm screen) ---
   swapSummary:
     '📋 *خلاصه تبادل*\n\n' +
-    '📤 *ارسال:* {sendAmount} {sendAsset} {sendUsd}\n' +
-    '📥 *دریافت:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    '🛡 *حداقل دریافت:* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
-    '📍 *مقصد:* {destination}\n' +
-    '🔙 *بازگشت:* {refund}\n\n' +
-    '🏷 *ارائه‌دهنده:* {provider}\n' +
-    '🕐 *زمان تخمینی:* {time}\n\n' +
+    'ارسال: *{sendAmount} {sendAsset} {sendUsd}*\n' +
+    'دریافت: *~{receiveAmount} {receiveAsset} {receiveUsd}*\n' +
+    'تضمین شده: *{minReceive} {receiveAsset} {minReceiveUsd}*\n\n' +
+    'مقصد: *{destination}*\n' +
+    'بازگشت: *{refund}*\n\n' +
+    'ارائه‌دهنده: *{provider}*\n' +
+    'زمان تخمینی: *{time}*\n\n' +
     '_این تبادل را تأیید می‌کنید؟_',
   confirmButton: '✅ تأیید',
 
   // --- Swap confirmed ---
   swapConfirmed:
-    '✅ *تبادل آماده شد!*\n\n' +
-    '📤 *ارسال:* {sendAmount} {sendAsset} {sendUsd}\n' +
-    '📥 *دریافت:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    '🛡 *حداقل دریافت:* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
-    '📍 *مقصد:* {destination}\n' +
-    '🔙 *بازگشت:* {refund}\n\n' +
-    '🏷 *ارائه‌دهنده:* {provider}\n' +
-    '🕐 *زمان تخمینی:* {time}\n\n' +
-    '==============================\n\n' +
-    '📍 دقیقاً `{sendAmount}` {sendAsset} را به آدرس زیر ارسال کنید:\n\n`{inboundAddress}`\n\n' +
-    '📱 یا کد QR را در کیف پول اسکن کنید\n\n' +
-    '_توجه: این تبادل پس از {expiration} منقضی می‌شود_\n\n' +
+    '✅ *آماده!*\n\n' +
+    'ارسال: {sendAmount} {sendAsset} {sendUsd}\n' +
+    'دریافت: ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    'تضمین شده: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    'مقصد: {destination}\n' +
+    'بازگشت: {refund}\n\n' +
+    'ارائه‌دهنده: {provider}\n' +
+    'زمان تخمینی: {time}\n\n' +
+    'انقضای پیشنهاد: {expiration}\n\n' +
+    '====================\n' +
+    '👇 راهنما 👇\n' +
+    '====================\n\n' +
+    '🔘 کد QR را در کیف پول اسکن کنید\n\n' +
+    '{orOpenWalletApp}' +
+    '🔘 یا {sendAsset} را دستی ارسال کنید:\n\n' +
+    '• مبلغ (برای کپی کلیک کنید)\n\n' +
+    '`{sendAmount}`\n\n' +
+    '• گیرنده (برای کپی کلیک کنید)\n\n' +
+    '`{inboundAddress}`\n\n' +
+    '====================\n\n' +
+    '{warning}' +
     '{trackLink}',
 
   // --- Swap errors ---
   preparingSwap:
     '📋 *خلاصه تبادل*\n\n' +
-    '📤 *ارسال:* {sendAmount} {sendAsset} {sendUsd}\n' +
-    '📥 *دریافت:* ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    '🛡 *حداقل دریافت:* {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
-    '📍 *مقصد:* {destination}\n' +
-    '🔙 *بازگشت:* {refund}\n\n' +
-    '🏷 *ارائه‌دهنده:* {provider}\n' +
-    '🕐 *زمان تخمینی:* {time}\n\n' +
+    'ارسال: *{sendAmount} {sendAsset} {sendUsd}*\n' +
+    'دریافت: *~{receiveAmount} {receiveAsset} {receiveUsd}*\n' +
+    'تضمین شده: *{minReceive} {receiveAsset} {minReceiveUsd}*\n\n' +
+    'مقصد: *{destination}*\n' +
+    'بازگشت: *{refund}*\n\n' +
+    'ارائه‌دهنده: *{provider}*\n' +
+    'زمان تخمینی: *{time}*\n\n' +
     '⏳ _در حال آماده‌سازی تبادل..._',
   swapFailedNoRoutes: '❌ *تبادل ناموفق* — مسیری در دسترس نیست.',
   swapNoQr: '❌ *تبادل تأیید شد* اما کد QR دریافت نشد.\nلطفاً با پشتیبانی تماس بگیرید.',
@@ -97,7 +115,10 @@ export const fa: Strings = {
   processingSwap: '⏳ در حال پردازش...',
   assetNotFound: 'دارایی یافت نشد',
   alreadySelected: 'قبلاً به عنوان دارایی ارسال انتخاب شده',
-  openInWallet: '💳 باز کردن در کیف پول',
+  orOpenWalletApp: '🔘 یا {openWalletApp}\n\n',
+  openWalletApp: 'کیف پول را باز کنید',
+  trackSwapHere: 'پیگیری تبادل',
+  amountWarning: '⚠️ دقیقاً مبلغ مشخص شده را ارسال کنید تا از از دست رفتن وجوه جلوگیری شود',
 
   // --- Price ---
   priceUnavailable:
@@ -110,9 +131,9 @@ export const fa: Strings = {
   botCancelReply: '🚫 عملیات فعلی لغو شد.',
 
   // --- Progress lines ---
-  progressSend: '📤 ارسال: *{asset}*',
-  progressReceive: '📥 دریافت: *{asset}*',
-  progressAmount: '🔢 مقدار: *{amount} {asset}* {amountUsd}',
-  progressDestination: '📍 مقصد: {address}',
-  progressRefund: '🔙 بازگشت: {address}'
+  progressSend: 'ارسال: *{asset}*',
+  progressReceive: 'دریافت: *{asset}*',
+  progressAmount: 'مقدار: *{amount} {asset} {amountUsd}*',
+  progressDestination: 'مقصد: *{address}*',
+  progressRefund: 'بازگشت: *{address}*'
 }
