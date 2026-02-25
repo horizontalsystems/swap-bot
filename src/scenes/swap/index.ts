@@ -25,7 +25,6 @@ import {
   searchResultsKeyboard,
   shortenAddress
 } from './helpers'
-import { buildPaymentUri } from '../../utils/paymentUri'
 
 // --- Helpers ---
 
@@ -610,6 +609,7 @@ swapWizard.action('confirm_swap', async ctx => {
 
     let qrDataURL: string | undefined
     let inboundAddr: string | undefined
+    let paymentUri: string | undefined
     let sendAmount: number = amount
     let sendAmountDisplay: string = formatAmount(amount)
     let expiresIn: number | undefined
@@ -643,9 +643,11 @@ swapWizard.action('confirm_swap', async ctx => {
       sendAmount = parseFloat(registerData.suggested_in_asset_amount)
       sendAmountDisplay = registerData.suggested_in_asset_amount
       expiresIn = preflightData.data.seconds_remaining
+      paymentUri = preflightData.data.qr_code
       console.log('[Swap] Memoless flow complete — inbound:', inboundAddr, 'sendAmount:', sendAmount)
     } else {
       qrDataURL = route.qrCodeDataURL
+      paymentUri = route.qrCodeStr
       inboundAddr = route.inboundAddress || route.targetAddress
       if (route.expiration) {
         expiresIn = Math.max(0, Math.floor(parseInt(route.expiration, 10) - Date.now() / 1000))
@@ -670,8 +672,7 @@ swapWizard.action('confirm_swap', async ctx => {
 
     const links: string[] = []
 
-    const paymentUri = buildPaymentUri(assetIn.chain, inboundAddr!, sendAmount, assetIn.address)
-    const paymentLink = paymentUri ? `https://swap.unstoppable.money/pay?uri=${paymentUri}` : null
+    const paymentLink = paymentUri ? `https://swap.unstoppable.money/pay?uri=${encodeURIComponent(paymentUri)}` : null
     if (paymentLink) links.push(`📲 [${S.openWalletApp}](${paymentLink})`)
 
     const provider = route.providers[0]

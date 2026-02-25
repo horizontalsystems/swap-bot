@@ -27,6 +27,7 @@ interface MemolessRegisterResponse {
 interface MemolessPreflightResponse {
   data: {
     qr_code_data_url: string
+    qr_code?: string
     inbound_address: string
     seconds_remaining?: number
   }

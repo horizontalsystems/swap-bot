@@ -58,6 +58,7 @@ export interface QuoteRoute {
   meta: Record<string, unknown>
   memo?: string
   qrCodeDataURL?: string
+  qrCodeStr?: string
   providerSwapId?: string
 }
 
