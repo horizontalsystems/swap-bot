@@ -678,7 +678,13 @@ swapWizard.action('confirm_swap', async ctx => {
     const trackUrl = buildTrackUrl(provider, {
       inboundAddr: inboundAddr,
       chainId: assetIn.chainId,
-      providerSwapId: route.providerSwapId
+      providerSwapId: route.providerSwapId,
+      fromAsset: assetIn.identifier,
+      fromAmount: sendAmount.toString(),
+      toAsset: assetOut.identifier,
+      toAmount: route.expectedBuyAmount,
+      toAddress: destinationAddress,
+      refundAddress: refundAddress
     })
     if (trackUrl) links.push(`🔍 [${S.trackSwap}](${trackUrl})`)
 

@@ -158,19 +158,39 @@ export function buildProgress(session: SwapSessionData, S: Strings): string {
 
 export function buildTrackUrl(
   provider: string,
-  opts: { inboundAddr?: string; chainId?: string | null; providerSwapId?: string }
+  opts: {
+    inboundAddr?: string
+    chainId?: string | null
+    providerSwapId?: string
+    fromAsset?: string
+    fromAmount?: string
+    toAsset?: string
+    toAmount?: string
+    toAddress?: string
+    refundAddress?: string
+  }
 ): string | null {
   const base = 'https://swap.unstoppable.money/track'
-  if (provider === 'THORCHAIN') {
-    if (!opts.inboundAddr || !opts.chainId) return null
-    return `${base}?provider=THORCHAIN&depositAddress=${encodeURIComponent(opts.inboundAddr)}&chainId=${encodeURIComponent(opts.chainId)}`
-  }
-  if (provider === 'NEAR') {
+  const params = new URLSearchParams()
+  params.set('provider', provider)
+
+  if (provider === 'THORCHAIN' || provider === 'NEAR') {
     if (!opts.inboundAddr) return null
-    return `${base}?provider=NEAR&depositAddress=${encodeURIComponent(opts.inboundAddr)}`
+    params.set('depositAddress', opts.inboundAddr)
+  } else {
+    if (!opts.providerSwapId) return null
+    params.set('providerSwapId', opts.providerSwapId)
   }
-  if (!opts.providerSwapId) return null
-  return `${base}?provider=${encodeURIComponent(provider)}&providerSwapId=${encodeURIComponent(opts.providerSwapId)}`
+
+  if (opts.chainId) params.set('chainId', opts.chainId)
+  if (opts.fromAsset) params.set('fromAsset', opts.fromAsset)
+  if (opts.fromAmount) params.set('fromAmount', opts.fromAmount)
+  if (opts.toAsset) params.set('toAsset', opts.toAsset)
+  if (opts.toAmount) params.set('toAmount', opts.toAmount)
+  if (opts.toAddress) params.set('toAddress', opts.toAddress)
+  if (opts.refundAddress) params.set('refundAddress', opts.refundAddress)
+
+  return `${base}?${params.toString()}`
 }
 
 export async function editSwapMessage(ctx: SwapContext, text: string, extra?: Record<string, unknown>) {
