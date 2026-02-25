@@ -43,7 +43,7 @@ export const en = {
   allProvidersFailed:
     '💱 Swap\n\n{progress}\n\n❌ No providers could fulfill this swap. Try a different amount or pair.',
   quotesHeader: '💱 Swap\n\n{progress}\n\n' + '{count} quotes available — select a route 👇\n\n{routes}',
-  quoteLine: '{index}. {provider} — {amount} {ticker} {receiveUsd} · 🕐 {time}',
+  quoteLine: '{index}. {provider} — {amount} {ticker} {receiveUsd} • 🕐 {time}',
   quoteError: '💱 Swap\n\n{progress}\n\n❌ Failed to fetch quote: {error}',
 
   // --- Swap summary (confirm screen) ---
@@ -55,7 +55,7 @@ export const en = {
     'Min: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 Destination: {destination}\n' +
     '↩️ Refund: {refund}\n' +
-    '🔗 Provider: {provider} · ~{time}\n' +
+    '🔗 Provider: {provider} • ~{time}\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Confirm this swap?',
   confirmButton: '✅ Confirm',
@@ -69,7 +69,7 @@ export const en = {
     'Min: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 Destination: {destination}\n' +
     '↩️ Refund: {refund}\n' +
-    '🔗 Provider: {provider} · ~{time}\n' +
+    '🔗 Provider: {provider} • ~{time}\n' +
     '⏳ Offer expires in: {expiration}\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Send exactly:\n' +
@@ -88,7 +88,7 @@ export const en = {
     'Min: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 Destination: {destination}\n' +
     '↩️ Refund: {refund}\n' +
-    '🔗 Provider: {provider} · ~{time}\n' +
+    '🔗 Provider: {provider} • ~{time}\n' +
     '━━━━━━━━━━━━━━━\n' +
     '⏳ Preparing swap...',
   swapFailedNoRoutes: '❌ Swap failed — no routes available.',
@@ -104,6 +104,8 @@ export const en = {
   openWalletApp: 'Open Wallet App',
   trackSwap: 'Track Swap',
   amountWarning: '⚠️ Send exact amount to avoid loss of funds',
+  changeAmount: '💰 Change Amount',
+  newSwap: '🔄 New Swap',
 
   // --- Price ---
   priceUnavailable:
@@ -117,6 +119,7 @@ export const en = {
   progressSend: 'Send: {asset}',
   progressReceive: 'Receive: {asset}',
   progressAmount: 'Amount: {amount} {asset} {amountUsd}',
+  progressProvider: 'Provider: {provider}',
   progressDestination: 'Destination: {address}',
   progressRefund: 'Refund: {address}'
 }

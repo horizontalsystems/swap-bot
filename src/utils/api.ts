@@ -54,7 +54,7 @@ interface QuoteParams {
   sellAsset: string
   buyAsset: string
   sellAmount: string
-  destinationAddress: string
+  destinationAddress?: string
   providers: string[]
   dry: boolean
   refundAddress?: string
@@ -66,9 +66,12 @@ export async function fetchQuote(params: QuoteParams): Promise<QuoteResponse> {
     buyAsset: params.buyAsset,
     sellAmount: params.sellAmount,
     slippage: SLIPPAGE,
-    destinationAddress: params.destinationAddress,
     providers: params.providers,
     dry: params.dry
+  }
+
+  if (params.destinationAddress) {
+    body.destinationAddress = params.destinationAddress
   }
 
   if (params.refundAddress) {

@@ -152,6 +152,7 @@ export function buildProgress(session: SwapSessionData, S: Strings): string {
         amountUsd: formatUsd(session.usdInputAmount)
       })
     )
+  if (session.quote) lines.push(t(S.progressProvider, { provider: providerName(session.quote.providers[0]) }))
   if (session.destinationAddress)
     lines.push(t(S.progressDestination, { address: shortenAddress(session.destinationAddress) }))
   if (session.refundAddress) lines.push(t(S.progressRefund, { address: shortenAddress(session.refundAddress) }))

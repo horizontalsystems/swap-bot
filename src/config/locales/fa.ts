@@ -44,7 +44,7 @@ export const fa: Strings = {
   allProvidersFailed:
     '💱 تبادل\n\n{progress}\n\n❌ هیچ ارائه‌دهنده‌ای نتوانست این تبادل را انجام دهد. مبلغ یا جفت دیگری را امتحان کنید.',
   quotesHeader: '💱 تبادل\n\n{progress}\n\n' + '{count} قیمت موجود — یک مسیر انتخاب کنید 👇\n\n{routes}',
-  quoteLine: '{index}. {provider} — {amount} {ticker} {receiveUsd} · 🕐 {time}',
+  quoteLine: '{index}. {provider} — {amount} {ticker} {receiveUsd} • 🕐 {time}',
   quoteError: '💱 تبادل\n\n{progress}\n\n❌ خطا در دریافت قیمت: {error}',
 
   // --- Swap summary (confirm screen) ---
@@ -56,7 +56,7 @@ export const fa: Strings = {
     'حداقل‌: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 مقصد: {destination}\n' +
     '↩️ بازگشت: {refund}\n' +
-    '🔗 ارائه‌دهنده: {provider} · ~{time}\n' +
+    '🔗 ارائه‌دهنده: {provider} • ~{time}\n' +
     '━━━━━━━━━━━━━━━\n' +
     'این تبادل را تأیید می‌کنید؟',
   confirmButton: '✅ تأیید',
@@ -70,7 +70,7 @@ export const fa: Strings = {
     'حداقل‌: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 مقصد: {destination}\n' +
     '↩️ بازگشت: {refund}\n' +
-    '🔗 ارائه‌دهنده: {provider} · ~{time}\n' +
+    '🔗 ارائه‌دهنده: {provider} • ~{time}\n' +
     '⏳ انقضای پیشنهاد: {expiration}\n' +
     '━━━━━━━━━━━━━━━\n' +
     'دقیقاً ارسال کنید:\n' +
@@ -89,7 +89,7 @@ export const fa: Strings = {
     'حداقل‌: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 مقصد: {destination}\n' +
     '↩️ بازگشت: {refund}\n' +
-    '🔗 ارائه‌دهنده: {provider} · ~{time}\n' +
+    '🔗 ارائه‌دهنده: {provider} • ~{time}\n' +
     '━━━━━━━━━━━━━━━\n' +
     '⏳ در حال آماده‌سازی تبادل...',
   swapFailedNoRoutes: '❌ تبادل ناموفق — مسیری در دسترس نیست.',
@@ -105,6 +105,8 @@ export const fa: Strings = {
   openWalletApp: 'باز کردن کیف پول',
   trackSwap: 'پیگیری تبادل',
   amountWarning: '⚠️ مبلغ دقیق را ارسال کنید تا از دست رفتن وجوه جلوگیری شود',
+  changeAmount: '💰 تغییر مبلغ',
+  newSwap: '🔄 تبادل جدید',
 
   // --- Price ---
   priceUnavailable:
@@ -118,6 +120,7 @@ export const fa: Strings = {
   progressSend: 'ارسال: {asset}',
   progressReceive: 'دریافت: {asset}',
   progressAmount: 'مقدار: {amount} {asset} {amountUsd}',
+  progressProvider: 'ارائه‌دهنده: {provider}',
   progressDestination: 'مقصد: {address}',
   progressRefund: 'بازگشت: {address}'
 }
