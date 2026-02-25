@@ -74,7 +74,7 @@ export const fa: Strings = {
     '⏳ انقضای پیشنهاد: {expiration}\n' +
     '━━━━━━━━━━━━━━━\n' +
     'دقیقاً ارسال کنید:\n' +
-    '`{sendAmount}` {sendAsset}\n\n' +
+    '`{sendAmountRaw}` {sendAsset}\n\n' +
     'به آدرس:\n' +
     '`{inboundAddress}`' +
     '{warning}' +

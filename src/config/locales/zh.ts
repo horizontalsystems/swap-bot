@@ -68,7 +68,7 @@ export const zh: Strings = {
     '⏳ 报价过期时间：{expiration}\n' +
     '━━━━━━━━━━━━━━━\n' +
     '请准确发送：\n' +
-    '`{sendAmount}` {sendAsset}\n\n' +
+    '`{sendAmountRaw}` {sendAsset}\n\n' +
     '至地址：\n' +
     '`{inboundAddress}`' +
     '{warning}' +

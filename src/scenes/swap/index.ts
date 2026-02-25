@@ -611,7 +611,7 @@ swapWizard.action('confirm_swap', async ctx => {
     let inboundAddr: string | undefined
     let paymentUri: string | undefined
     let sendAmount: number = amount
-    let sendAmountDisplay: string = formatAmount(amount)
+    let sendAmountRaw: string = amount.toString()
     let expiresIn: number | undefined
 
     if (isThorchain) {
@@ -641,7 +641,7 @@ swapWizard.action('confirm_swap', async ctx => {
       qrDataURL = preflightData.data.qr_code_data_url
       inboundAddr = preflightData.data.inbound_address
       sendAmount = parseFloat(registerData.suggested_in_asset_amount)
-      sendAmountDisplay = registerData.suggested_in_asset_amount
+      sendAmountRaw = registerData.suggested_in_asset_amount
       expiresIn = preflightData.data.seconds_remaining
       paymentUri = preflightData.data.qr_code
       console.log('[Swap] Memoless flow complete — inbound:', inboundAddr, 'sendAmount:', sendAmount)
@@ -690,7 +690,8 @@ swapWizard.action('confirm_swap', async ctx => {
     if (trackUrl) links.push(`🔍 [${S.trackSwap}](${trackUrl})`)
 
     let caption = t(S.swapConfirmed, {
-      sendAmount: sendAmountDisplay,
+      sendAmount: formatAmount(sendAmount),
+      sendAmountRaw: sendAmountRaw,
       sendAsset: assetCaption(assetIn),
       sendUsd: formatUsd(confirmSendUsd),
       receiveAmount: formatAmount(route.expectedBuyAmount),

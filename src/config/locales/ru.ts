@@ -74,7 +74,7 @@ export const ru: Strings = {
     '⏳ Предложение истекает через: {expiration}\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Отправьте ровно:\n' +
-    '`{sendAmount}` {sendAsset}\n\n' +
+    '`{sendAmountRaw}` {sendAsset}\n\n' +
     'На адрес:\n' +
     '`{inboundAddress}`' +
     '{warning}' +

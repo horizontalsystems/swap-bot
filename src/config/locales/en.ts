@@ -73,7 +73,7 @@ export const en = {
     '⏳ Offer expires in: {expiration}\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Send exactly:\n' +
-    '`{sendAmount}` {sendAsset}\n\n' +
+    '`{sendAmountRaw}` {sendAsset}\n\n' +
     'To address:\n' +
     '`{inboundAddress}`' +
     '{warning}' +
