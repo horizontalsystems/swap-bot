@@ -32,6 +32,12 @@ bot.use(stage.middleware())
 bot.start(ctx => ctx.scene.enter('swap-wizard'))
 bot.command('swap', ctx => ctx.scene.enter('swap-wizard'))
 
+bot.command('faq', async ctx => {
+  const S = s(ctx.from?.language_code)
+  await ctx.scene.leave()
+  ctx.reply(S.faq, { parse_mode: 'Markdown' })
+})
+
 bot.command('cancel', ctx => {
   const S = s(ctx.from?.language_code)
   ctx.scene.leave()
@@ -49,16 +55,31 @@ async function main() {
 
   // Set bot menu commands (non-fatal — skip if rate-limited)
   try {
-    await bot.telegram.setMyCommands([{ command: 'swap', description: 'Start a new swap' }])
-    await bot.telegram.setMyCommands([{ command: 'swap', description: 'Начать новый обмен' }], {
-      language_code: 'ru'
-    })
-    await bot.telegram.setMyCommands([{ command: 'swap', description: '开始新兑换' }], {
-      language_code: 'zh'
-    })
-    await bot.telegram.setMyCommands([{ command: 'swap', description: 'شروع تبادل جدید' }], {
-      language_code: 'fa'
-    })
+    await bot.telegram.setMyCommands([
+      { command: 'swap', description: 'Start a new swap' },
+      { command: 'faq', description: 'Frequently asked questions' }
+    ])
+    await bot.telegram.setMyCommands(
+      [
+        { command: 'swap', description: 'Начать новый обмен' },
+        { command: 'faq', description: 'Часто задаваемые вопросы' }
+      ],
+      { language_code: 'ru' }
+    )
+    await bot.telegram.setMyCommands(
+      [
+        { command: 'swap', description: '开始新兑换' },
+        { command: 'faq', description: '常见问题' }
+      ],
+      { language_code: 'zh' }
+    )
+    await bot.telegram.setMyCommands(
+      [
+        { command: 'swap', description: 'شروع تبادل جدید' },
+        { command: 'faq', description: 'سؤالات متداول' }
+      ],
+      { language_code: 'fa' }
+    )
   } catch (err) {
     console.warn('[Bot] setMyCommands failed (rate-limited?), skipping:', (err as Error).message)
   }

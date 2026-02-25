@@ -21,6 +21,7 @@ import {
   formatAmount,
   formatTime,
   formatUsd,
+  providerLabel,
   providerName,
   searchResultsKeyboard,
   shortenAddress
@@ -119,7 +120,7 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
   })
 
   const routeButtons = quoteResponse.routes.map((route, i) =>
-    Markup.button.callback(`${i + 1}. ${providerName(route.providers[0])}`, `route_${i}`)
+    Markup.button.callback(`${i + 1}. ${providerLabel(route.providers[0])}`, `route_${i}`)
   )
 
   const buttonRows = routeButtons.map(btn => [btn])
@@ -394,6 +395,14 @@ swapWizard.command('cancel', async ctx => {
   const S = s(ctx.from?.language_code)
   await deleteUserMessage(ctx)
   await editSwapMessage(ctx, S.swapCancelled)
+  return ctx.scene.leave()
+})
+
+// --- /faq command inside wizard ---
+swapWizard.command('faq', async ctx => {
+  const S = s(ctx.from?.language_code)
+  await editSwapMessage(ctx, S.swapCancelled)
+  await ctx.reply(S.faq, { parse_mode: 'Markdown' })
   return ctx.scene.leave()
 })
 

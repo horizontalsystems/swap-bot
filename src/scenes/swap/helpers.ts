@@ -14,7 +14,6 @@ export function clearSearchCancelRow(S: Strings) {
 
 export const providerTitles: Record<string, string> = {
   THORCHAIN: 'THORChain',
-  MAYACHAIN: 'Maya Protocol',
   NEAR: 'Near',
   SWAPUZ: 'Swapuz',
   STEALTHEX: 'StealthEX',
@@ -24,6 +23,21 @@ export const providerTitles: Record<string, string> = {
 
 export function providerName(id: string): string {
   return providerTitles[id] ?? id
+}
+
+const providerRisk: Record<string, string> = {
+  THORCHAIN: 'DEX 👌',
+  SWAPUZ: 'Private liquidity 👌',
+  STEALTHEX: 'AML',
+  LETSEXCHANGE: 'AML',
+  QUICKEX: 'AML',
+  NEAR: 'AML'
+}
+
+export function providerLabel(id: string): string {
+  const name = providerTitles[id] ?? id
+  const risk = providerRisk[id]
+  return risk ? `${name} · ${risk}` : name
 }
 
 const chainLabels: Record<string, string> = {

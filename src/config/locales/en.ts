@@ -121,5 +121,32 @@ export const en = {
   progressAmount: 'Amount: {amount} {asset} {amountUsd}',
   progressProvider: 'Provider: {provider}',
   progressDestination: 'Destination: {address}',
-  progressRefund: 'Refund: {address}'
+  progressRefund: 'Refund: {address}',
+
+  // --- FAQ ---
+  faq:
+    '❓ *FAQ*\n\n' +
+    '*What is this bot?*\n\n' +
+    'A crypto-to-crypto swap bot inside Telegram.\n\n' +
+    'Choose what you want to send and receive, compare quotes from multiple providers, and complete the swap without connecting a wallet.\n\n' +
+    '*Which providers are supported?*\n\n' +
+    'The bot aggregates both decentralized and centralized providers. Available providers depend on the asset pair.\n\n' +
+    '*Can providers freeze assets?*\n\n' +
+    'It depends on the provider type.\n\n' +
+    'DEX protocols cannot freeze funds. The swap either executes or fails (funds are refunded automatically).\n\n' +
+    'Private-liquity providers operate using their own liquidity. Freezes are very and very unlikely but counterparty risk still exists.\n\n' +
+    'Majority of sources that operate with third party liquidity have AML policies. In most cases swaps are rejected and refunded if any AML issues are detected. In rare situations a provider may request KYC before releasing funds.\n\n' +
+    'Risk level is shown next to each provider before you choose.\n\n' +
+    '*Do you hold my funds?*\n\n' +
+    'No. Unstoppable Swap Bot never custody funds. Swaps are executed directly by third-party providers.\n\n' +
+    'The bot only requests quotes, shows options and provides transaction instructions. Funds move directly between you and the provider.\n\n' +
+    '*What is a refund address?*\n\n' +
+    'A refund address is where funds are returned if a swap fails. Some providers require it as a safety measure.\n\n' +
+    'THORChain DEX swaps do not require a refund address.\n\n' +
+    '*What does "Send exact amount" mean?*\n\n' +
+    'Some providers (especially THORChain) require the precise amount shown. Sending more or less may cause: swap failure, delays or loss of funds. Always send the exact amount displayed.\n\n' +
+    '*How do I track my swap?*\n\n' +
+    'After confirmation, the bot provides a Track Swap link. You can monitor: swap progress and execution status.\n\n' +
+    '*Can I cancel a swap?*\n\n' +
+    'You can cancel anytime before confirmation step. After the funds are sent to the deposit address, swaps cannot be reversed through the bot.'
 }
