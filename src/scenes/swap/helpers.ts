@@ -125,14 +125,11 @@ export function formatUsd(amount: number | null | undefined): string {
 }
 
 export function formatTime(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`
   const hours = Math.floor(seconds / 3600)
-  const mins = Math.floor((seconds % 3600) / 60)
-  const secs = seconds % 60
-  const parts: string[] = []
-  if (hours > 0) parts.push(`${hours}h`)
+  const mins = Math.ceil((seconds % 3600) / 60)
+  if (hours === 0) return `${Math.max(mins, 1)}m`
+  const parts: string[] = [`${hours}h`]
   if (mins > 0) parts.push(`${mins}m`)
-  if (secs > 0 && hours === 0) parts.push(`${secs}s`)
   return parts.join(' ')
 }
 

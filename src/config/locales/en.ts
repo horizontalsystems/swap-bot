@@ -43,7 +43,7 @@ export const en = {
   allProvidersFailed:
     '💱 Swap\n\n{progress}\n\n❌ No providers could fulfill this swap. Try a different amount or pair.',
   quotesHeader: '💱 Swap\n\n{progress}\n\n' + '{count} quotes available — select a route 👇\n\n{routes}',
-  quoteLine: '{index}. {provider} — {amount} {ticker} {receiveUsd} • 🕐 {time}',
+  quoteLine: '{index}. {amount} {ticker} {receiveUsd} • 🕐 {time}',
   quoteError: '💱 Swap\n\n{progress}\n\n❌ Failed to fetch quote: {error}',
 
   // --- Swap summary (confirm screen) ---
@@ -51,11 +51,11 @@ export const en = {
     '📋 Swap Summary\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Send: {sendAmount} {sendAsset} {sendUsd}\n' +
-    'Receive: ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    'Receive: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
     'Min: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 Destination: {destination}\n' +
     '↩️ Refund: {refund}\n' +
-    '🔗 Provider: {provider} • ~{time}\n' +
+    '🔗 Provider: {provider} • {time}\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Confirm this swap?',
   confirmButton: '✅ Confirm',
@@ -65,11 +65,11 @@ export const en = {
     '💱 Swap Summary\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Send: {sendAmount} {sendAsset} {sendUsd}\n' +
-    'Receive: ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    'Receive: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
     'Min: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 Destination: {destination}\n' +
     '↩️ Refund: {refund}\n' +
-    '🔗 Provider: {provider} • ~{time}\n' +
+    '🔗 Provider: {provider} • {time}\n' +
     '⏳ Offer expires in: {expiration}\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Send exactly:\n' +
@@ -84,11 +84,11 @@ export const en = {
     '📋 Swap Summary\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Send: {sendAmount} {sendAsset} {sendUsd}\n' +
-    'Receive: ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    'Receive: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
     'Min: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 Destination: {destination}\n' +
     '↩️ Refund: {refund}\n' +
-    '🔗 Provider: {provider} • ~{time}\n' +
+    '🔗 Provider: {provider} • {time}\n' +
     '━━━━━━━━━━━━━━━\n' +
     '⏳ Preparing swap...',
   swapFailedNoRoutes: '❌ Swap failed — no routes available.',

@@ -44,7 +44,7 @@ export const ru: Strings = {
   allProvidersFailed:
     '💱 Обмен\n\n{progress}\n\n❌ Ни один провайдер не смог выполнить обмен. Попробуйте другую сумму или пару.',
   quotesHeader: '💱 Обмен\n\n{progress}\n\n' + '{count} котировок доступно — выберите маршрут 👇\n\n{routes}',
-  quoteLine: '{index}. {provider} — {amount} {ticker} {receiveUsd} • 🕐 {time}',
+  quoteLine: '{index}. {amount} {ticker} {receiveUsd} • 🕐 {time}',
   quoteError: '💱 Обмен\n\n{progress}\n\n❌ Ошибка получения котировки: {error}',
 
   // --- Swap summary (confirm screen) ---
@@ -52,11 +52,11 @@ export const ru: Strings = {
     '📋 Итого по обмену\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Отправка: {sendAmount} {sendAsset} {sendUsd}\n' +
-    'Получение: ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    'Получение: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
     'Мин: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 Назначение: {destination}\n' +
     '↩️ Возврат: {refund}\n' +
-    '🔗 Провайдер: {provider} • ~{time}\n' +
+    '🔗 Провайдер: {provider} • {time}\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Подтвердить обмен?',
   confirmButton: '✅ Подтвердить',
@@ -66,11 +66,11 @@ export const ru: Strings = {
     '💱 Итого по обмену\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Отправка: {sendAmount} {sendAsset} {sendUsd}\n' +
-    'Получение: ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    'Получение: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
     'Мин: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 Назначение: {destination}\n' +
     '↩️ Возврат: {refund}\n' +
-    '🔗 Провайдер: {provider} • ~{time}\n' +
+    '🔗 Провайдер: {provider} • {time}\n' +
     '⏳ Предложение истекает через: {expiration}\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Отправьте ровно:\n' +
@@ -85,11 +85,11 @@ export const ru: Strings = {
     '📋 Итого по обмену\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Отправка: {sendAmount} {sendAsset} {sendUsd}\n' +
-    'Получение: ~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    'Получение: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
     'Мин: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 Назначение: {destination}\n' +
     '↩️ Возврат: {refund}\n' +
-    '🔗 Провайдер: {provider} • ~{time}\n' +
+    '🔗 Провайдер: {provider} • {time}\n' +
     '━━━━━━━━━━━━━━━\n' +
     '⏳ Подготовка обмена...',
   swapFailedNoRoutes: '❌ Обмен не удался — нет доступных маршрутов.',

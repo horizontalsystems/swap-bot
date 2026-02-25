@@ -123,10 +123,7 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
     Markup.button.callback(`${i + 1}. ${providerName(route.providers[0])}`, `route_${i}`)
   )
 
-  const buttonRows: ReturnType<typeof Markup.button.callback>[][] = []
-  for (let i = 0; i < routeButtons.length; i += 2) {
-    buttonRows.push(routeButtons.slice(i, i + 2))
-  }
+  const buttonRows = routeButtons.map(btn => [btn])
   buttonRows.push(backCancelRow(S))
 
   await editSwapMessage(
@@ -161,6 +158,8 @@ async function showSummary(ctx: SwapContext) {
     provider: providerName(quote!.providers[0]),
     time: formatTime(quote!.estimatedTime.total)
   })
+  if (quote!.expectedBuyAmount === quote!.expectedBuyAmountMaxSlippage)
+    summaryText = summaryText.replace(/\n[^\n]+\n(\n📍)/, '\n$1')
   if (!refundAddress) summaryText = summaryText.replace(/↩️.*\n/g, '')
 
   await editSwapMessage(ctx, summaryText, {
@@ -582,6 +581,8 @@ swapWizard.action('confirm_swap', async ctx => {
     provider: providerName(quote.providers[0]),
     time: formatTime(quote.estimatedTime.total)
   })
+  if (quote.expectedBuyAmount === quote.expectedBuyAmountMaxSlippage)
+    preparingText = preparingText.replace(/\n[^\n]+\n(\n📍)/, '\n$1')
   if (!refundAddress) preparingText = preparingText.replace(/↩️.*\n/g, '')
 
   await ctx.editMessageText(preparingText, { parse_mode: 'Markdown' })
@@ -699,6 +700,8 @@ swapWizard.action('confirm_swap', async ctx => {
       warning,
       links: links.length ? `\n\n${links.join(' • ')}` : ''
     })
+    if (route.expectedBuyAmount === route.expectedBuyAmountMaxSlippage)
+      caption = caption.replace(/\n[^\n]+\n(\n📍)/, '\n$1')
     if (!refundAddress) caption = caption.replace(/↩️.*\n/g, '')
 
     await deleteSwapMessage(ctx)

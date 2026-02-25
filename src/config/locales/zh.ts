@@ -38,7 +38,7 @@ export const zh: Strings = {
   noRoutes: '💱 兑换\n\n{progress}\n\n❌ 此交易对没有可用的兑换路线。',
   allProvidersFailed: '💱 兑换\n\n{progress}\n\n❌ 没有提供商能够完成此兑换。请尝试其他金额或交易对。',
   quotesHeader: '💱 兑换\n\n{progress}\n\n' + '{count} 个报价可用 — 请选择路线 👇\n\n{routes}',
-  quoteLine: '{index}. {provider} — {amount} {ticker} {receiveUsd} • 🕐 {time}',
+  quoteLine: '{index}. {amount} {ticker} {receiveUsd} • 🕐 {time}',
   quoteError: '💱 兑换\n\n{progress}\n\n❌ 获取报价失败: {error}',
 
   // --- Swap summary (confirm screen) ---
@@ -46,11 +46,11 @@ export const zh: Strings = {
     '📋 兑换摘要\n' +
     '━━━━━━━━━━━━━━━\n' +
     '发送：{sendAmount} {sendAsset} {sendUsd}\n' +
-    '接收：~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    '接收：{receiveAmount} {receiveAsset} {receiveUsd}\n' +
     '最少: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 接收地址：{destination}\n' +
     '↩️ 退款地址：{refund}\n' +
-    '🔗 提供商：{provider} • ~{time}\n' +
+    '🔗 提供商：{provider} • {time}\n' +
     '━━━━━━━━━━━━━━━\n' +
     '确认此兑换？',
   confirmButton: '✅ 确认',
@@ -60,11 +60,11 @@ export const zh: Strings = {
     '💱 兑换摘要\n' +
     '━━━━━━━━━━━━━━━\n' +
     '发送：{sendAmount} {sendAsset} {sendUsd}\n' +
-    '接收：~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    '接收：{receiveAmount} {receiveAsset} {receiveUsd}\n' +
     '最少: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 接收地址：{destination}\n' +
     '↩️ 退款地址：{refund}\n' +
-    '🔗 提供商：{provider} • ~{time}\n' +
+    '🔗 提供商：{provider} • {time}\n' +
     '⏳ 报价过期时间：{expiration}\n' +
     '━━━━━━━━━━━━━━━\n' +
     '请准确发送：\n' +
@@ -79,11 +79,11 @@ export const zh: Strings = {
     '📋 兑换摘要\n' +
     '━━━━━━━━━━━━━━━\n' +
     '发送：{sendAmount} {sendAsset} {sendUsd}\n' +
-    '接收：~{receiveAmount} {receiveAsset} {receiveUsd}\n' +
+    '接收：{receiveAmount} {receiveAsset} {receiveUsd}\n' +
     '最少: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
     '📍 接收地址：{destination}\n' +
     '↩️ 退款地址：{refund}\n' +
-    '🔗 提供商：{provider} • ~{time}\n' +
+    '🔗 提供商：{provider} • {time}\n' +
     '━━━━━━━━━━━━━━━\n' +
     '⏳ 正在准备兑换...',
   swapFailedNoRoutes: '❌ 兑换失败 — 没有可用路线。',
