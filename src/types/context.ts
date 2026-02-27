@@ -6,6 +6,7 @@ export interface TokenListItem {
   identifier: string
   name: string
   providers: string[]
+  decimals?: number
   [key: string]: unknown
 }
 
@@ -26,6 +27,7 @@ export interface Asset {
   address: string | null // contract address, null for native tokens
   coingeckoId: string | null // CoinGecko UID for price lookups
   chainId: string | null // e.g. "bitcoin", "ethereum" — used for tracking URLs
+  decimals: number | null
 }
 
 // --- Quote types ---

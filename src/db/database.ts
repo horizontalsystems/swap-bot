@@ -30,7 +30,8 @@ function initSchema(): void {
       address TEXT,
       providers TEXT,
       coingecko_id TEXT,
-      chain_id TEXT
+      chain_id TEXT,
+      decimals INTEGER
     );
   `)
 

@@ -24,7 +24,8 @@ import {
   providerLabel,
   providerName,
   searchResultsKeyboard,
-  shortenAddress
+  shortenAddress,
+  truncateToDecimals
 } from './helpers'
 
 // --- Helpers ---
@@ -112,7 +113,7 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
     return t(S.quoteLine, {
       index: i + 1,
       provider: providerName(route.providers[0]),
-      amount: formatAmount(route.expectedBuyAmount),
+      amount: formatAmount(route.expectedBuyAmount, assetOut!.decimals),
       ticker: assetOut!.ticker,
       receiveUsd: formatUsd(receiveUsdVal),
       time: formatTime(route.estimatedTime.total)
@@ -145,13 +146,13 @@ async function showSummary(ctx: SwapContext) {
   const minReceiveUsdVal = outPrice != null ? outPrice * parseFloat(quote!.expectedBuyAmountMaxSlippage) : null
 
   let summaryText = t(S.swapSummary, {
-    sendAmount: formatAmount(amount!),
+    sendAmount: formatAmount(amount!, assetIn!.decimals),
     sendAsset: assetCaption(assetIn!),
     sendUsd: formatUsd(sendUsdVal),
-    receiveAmount: formatAmount(quote!.expectedBuyAmount),
+    receiveAmount: formatAmount(quote!.expectedBuyAmount, assetOut!.decimals),
     receiveAsset: assetCaption(assetOut!),
     receiveUsd: formatUsd(receiveUsdVal),
-    minReceive: formatAmount(quote!.expectedBuyAmountMaxSlippage),
+    minReceive: formatAmount(quote!.expectedBuyAmountMaxSlippage, assetOut!.decimals),
     minReceiveUsd: formatUsd(minReceiveUsdVal),
     destination: shortenAddress(destinationAddress!),
     refund: refundAddress ? shortenAddress(refundAddress) : '',
@@ -291,10 +292,10 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
         return
       }
 
-      ctx.scene.session.amount = parsedAmount / price
+      ctx.scene.session.amount = truncateToDecimals(parsedAmount / price, ctx.scene.session.assetIn!.decimals)
       ctx.scene.session.usdInputAmount = parsedAmount
     } else {
-      ctx.scene.session.amount = parsedAmount
+      ctx.scene.session.amount = truncateToDecimals(parsedAmount, ctx.scene.session.assetIn!.decimals)
       const price = await getAssetPrice(ctx.scene.session.assetIn!.coingeckoId)
       ctx.scene.session.usdInputAmount = price != null ? parsedAmount * price : undefined
     }
@@ -576,13 +577,13 @@ swapWizard.action('confirm_swap', async ctx => {
   const minReceiveUsdVal = outPrice != null ? outPrice * parseFloat(quote.expectedBuyAmountMaxSlippage) : null
 
   let preparingText = t(S.preparingSwap, {
-    sendAmount: formatAmount(amount),
+    sendAmount: formatAmount(amount, assetIn.decimals),
     sendAsset: assetCaption(assetIn),
     sendUsd: formatUsd(sendUsdVal),
-    receiveAmount: formatAmount(quote.expectedBuyAmount),
+    receiveAmount: formatAmount(quote.expectedBuyAmount, assetOut.decimals),
     receiveAsset: assetCaption(assetOut),
     receiveUsd: formatUsd(receiveUsdVal),
-    minReceive: formatAmount(quote.expectedBuyAmountMaxSlippage),
+    minReceive: formatAmount(quote.expectedBuyAmountMaxSlippage, assetOut.decimals),
     minReceiveUsd: formatUsd(minReceiveUsdVal),
     destination: shortenAddress(destinationAddress),
     refund: refundAddress ? shortenAddress(refundAddress) : '',
@@ -699,14 +700,14 @@ swapWizard.action('confirm_swap', async ctx => {
     if (trackUrl) links.push(`🔍 [${S.trackSwap}](${trackUrl})`)
 
     let caption = t(S.swapConfirmed, {
-      sendAmount: formatAmount(sendAmount),
+      sendAmount: formatAmount(sendAmount, assetIn.decimals),
       sendAmountRaw: sendAmountRaw,
       sendAsset: assetCaption(assetIn),
       sendUsd: formatUsd(confirmSendUsd),
-      receiveAmount: formatAmount(route.expectedBuyAmount),
+      receiveAmount: formatAmount(route.expectedBuyAmount, assetOut.decimals),
       receiveAsset: assetCaption(assetOut),
       receiveUsd: formatUsd(confirmReceiveUsd),
-      minReceive: formatAmount(route.expectedBuyAmountMaxSlippage),
+      minReceive: formatAmount(route.expectedBuyAmountMaxSlippage, assetOut.decimals),
       minReceiveUsd: formatUsd(confirmMinReceiveUsd),
       destination: shortenAddress(destinationAddress),
       refund: refundAddress ? shortenAddress(refundAddress) : '',

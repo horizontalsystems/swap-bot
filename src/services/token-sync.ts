@@ -22,7 +22,8 @@ export async function syncTokens(): Promise<void> {
       address: t.address as string | null | undefined,
       providers: t.providers,
       coingeckoId: t.coingeckoId as string | null | undefined,
-      chainId: t.chainId as string | null | undefined
+      chainId: t.chainId as string | null | undefined,
+      decimals: (t.decimals as number | undefined) ?? null
     }))
   )
 

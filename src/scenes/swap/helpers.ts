@@ -102,26 +102,41 @@ export function shortenAddress(address: string): string {
 }
 
 /**
+ * Truncate a number to at most `decimals` fractional digits (floor towards zero).
+ * Used to ensure token amounts don't exceed the asset's native precision.
+ */
+export function truncateToDecimals(value: number, decimals: number | null | undefined): number {
+  if (decimals == null) return value
+  const factor = 10 ** decimals
+  return Math.trunc(value * factor) / factor
+}
+
+/**
  * Smart number formatting: show ~4 significant digits in the decimal part,
  * reducing precision for larger numbers where decimals matter less.
  */
-export function formatAmount(value: number | string): string {
+export function formatAmount(value: number | string, decimals?: number | null): string {
   const num = typeof value === 'string' ? parseFloat(value) : value
   if (isNaN(num)) return String(value)
   if (num === 0) return '0'
 
   const abs = Math.abs(num)
 
-  if (abs >= 10_000) return num.toLocaleString('en-US', { maximumFractionDigits: 0 })
-  if (abs >= 1_000) return num.toLocaleString('en-US', { maximumFractionDigits: 1 })
-  if (abs >= 100) return num.toLocaleString('en-US', { maximumFractionDigits: 2 })
-  if (abs >= 10) return num.toLocaleString('en-US', { maximumFractionDigits: 2 })
-  if (abs >= 1) return num.toLocaleString('en-US', { maximumFractionDigits: 4 })
+  let maxFrac: number
+  if (abs >= 10_000) maxFrac = 0
+  else if (abs >= 1_000) maxFrac = 1
+  else if (abs >= 100) maxFrac = 2
+  else if (abs >= 10) maxFrac = 2
+  else if (abs >= 1) maxFrac = 4
+  else {
+    // For numbers < 1: find leading zeros then show 4 significant digits
+    const leadingZeros = -Math.floor(Math.log10(abs)) - 1
+    maxFrac = Math.min(leadingZeros + 4, 20)
+  }
 
-  // For numbers < 1: find leading zeros then show 4 significant digits
-  const leadingZeros = -Math.floor(Math.log10(abs)) - 1
-  const decimals = leadingZeros + 4
-  return num.toLocaleString('en-US', { maximumFractionDigits: Math.min(decimals, 20) })
+  if (decimals != null) maxFrac = Math.min(maxFrac, decimals)
+
+  return num.toLocaleString('en-US', { maximumFractionDigits: maxFrac })
 }
 
 export function formatUsd(amount: number | null | undefined): string {
@@ -158,7 +173,7 @@ export function buildProgress(session: SwapSessionData, S: Strings): string {
   if (session.amount != null && session.assetIn)
     lines.push(
       t(S.progressAmount, {
-        amount: formatAmount(session.amount),
+        amount: formatAmount(session.amount, session.assetIn.decimals),
         asset: assetCaption(session.assetIn),
         amountUsd: formatUsd(session.usdInputAmount)
       })
