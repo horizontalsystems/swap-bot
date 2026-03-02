@@ -6,19 +6,22 @@
   "scripts": {
     "dev": "nodemon",
     "build": "tsc",
-    "start": "node dist/bot.js"
+    "start": "node dist/bot.js",
+    "start:simplex": "node dist/simplex-bot.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@simplex-chat/types": "^0.3.0",
     "bech32": "^2.0.0",
     "better-sqlite3": "^12.6.2",
     "bs58": "^6.0.0",
     "bs58check": "^4.0.0",
     "dotenv": "^17.3.1",
     "ethers": "^6.16.0",
+    "simplex-chat": "^0.3.0",
     "telegraf": "^4.16.3"
   },
   "devDependencies": {
