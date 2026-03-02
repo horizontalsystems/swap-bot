@@ -108,7 +108,7 @@ async function main(): Promise<void> {
   }
 
   // Auto-accept incoming contact requests
-  await client.enableAddressAutoAccept(user.userId, { type: 'text', text: 'Welcome! Type /swap to start a new swap.' })
+  await client.enableAddressAutoAccept(user.userId, { type: 'text', text: 'Welcome! Type s to start a new swap.' })
   console.log('[SimpleX] Auto-accept enabled')
 
   cleanupTimer = setInterval(cleanupSessions, CLEANUP_INTERVAL_MS)

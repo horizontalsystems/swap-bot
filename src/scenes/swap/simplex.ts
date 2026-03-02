@@ -120,7 +120,7 @@ async function showSelectSendAsset(client: ChatClient, contactId: number, sessio
     return
   }
   session.menuItems = featured
-  await send(client, contactId, S.selectSendAsset + '\n\n' + assetList(featured) + hint('Type /c to cancel swap.'))
+  await send(client, contactId, S.selectSendAsset + '\n\n' + assetList(featured) + hint('Type c to cancel swap.'))
 }
 
 async function showSelectRecvAsset(client: ChatClient, contactId: number, session: SimplexSwapSession): Promise<void> {
@@ -132,7 +132,7 @@ async function showSelectRecvAsset(client: ChatClient, contactId: number, sessio
     t(S.selectReceiveAsset, { progress: progress(session) }) +
       '\n\n' +
       assetList(featured, session.assetIn?.identifier) +
-      hint('Type /b to go back or /c to cancel swap.')
+      hint('Type b to go back or c to cancel swap.')
   )
 }
 
@@ -141,7 +141,7 @@ async function showEnterAmount(client: ChatClient, contactId: number, session: S
     client,
     contactId,
     t(S.enterAmount, { progress: progress(session), asset: code(assetCaption(session.assetIn!)) }) +
-      hint('Type /b to go back or /c to cancel swap.')
+      hint('Type b to go back or c to cancel swap.')
   )
 }
 
@@ -150,7 +150,7 @@ async function showEnterDestination(client: ChatClient, contactId: number, sessi
     client,
     contactId,
     t(S.enterDestination, { progress: progress(session), asset: code(assetCaption(session.assetOut!)) }) +
-      hint('Type /b to go back or /c to cancel swap.')
+      hint('Type b to go back or c to cancel swap.')
   )
 }
 
@@ -159,7 +159,7 @@ async function showEnterRefund(client: ChatClient, contactId: number, session: S
     client,
     contactId,
     t(S.enterRefund, { progress: progress(session), asset: code(assetCaption(session.assetIn!)) }) +
-      hint('Type /b to go back or /c to cancel swap.')
+      hint('Type b to go back or c to cancel swap.')
   )
 }
 
@@ -194,7 +194,7 @@ async function fetchAndShowRoutes(
     const failMsg = quoteResponse.providerErrors?.length
       ? t(S.allProvidersFailed, { progress: prog })
       : t(S.noRoutes, { progress: prog })
-    await send(client, contactId, failMsg + hint('Type /b to change amount or /s to start over.'))
+    await send(client, contactId, failMsg + hint('Type b to change amount or s to start over.'))
     return false
   }
 
@@ -221,7 +221,7 @@ async function fetchAndShowRoutes(
     client,
     contactId,
     t(S.quotesHeader, { progress: prog, count: quoteResponse.routes.length, routes: routeLines.join('\n') }) +
-      hint('Type /b to go back or /c to cancel swap.')
+      hint('Type b to go back or c to cancel swap.')
   )
 
   return true
@@ -253,7 +253,7 @@ async function showSummary(client: ChatClient, contactId: number, session: Simpl
     summaryText = summaryText.replace(/\n[^\n]+\n(\n📍)/, '\n$1')
   if (!refundAddress) summaryText = summaryText.replace(/↩️.*\n/g, '')
 
-  await send(client, contactId, summaryText + hint('Type /y to proceed, /b to go back, or /c to cancel swap.'))
+  await send(client, contactId, summaryText + hint('Type y to proceed, b to go back, or c to cancel swap.'))
 }
 
 // --- Step handlers ---
@@ -282,13 +282,13 @@ async function handleSelectSendAsset(
       await send(
         client,
         contactId,
-        S.selectSendAsset + '\n\n' + assetList(results) + hint('Type /r to reset search or /c to cancel swap.')
+        S.selectSendAsset + '\n\n' + assetList(results) + hint('Type r to reset search or c to cancel swap.')
       )
     } else {
       await send(
         client,
         contactId,
-        'No assets found. Try a different search.\n\n_Type /r to reset search or /b to go back._'
+        'No assets found. Try a different search.\n\n_Type r to reset search or b to go back._'
       )
     }
     return
@@ -324,9 +324,9 @@ async function handleSelectRecvAsset(
       await send(
         client,
         contactId,
-        t(S.noProviders, { progress: progress(session) }) + hint('Type /b to go back or /c to cancel swap.')
+        t(S.noProviders, { progress: progress(session) }) + hint('Type b to go back or c to cancel swap.')
       )
-      // Stay at ENTER_AMOUNT so "/back" returns to SELECT_RECV_ASSET
+      // Stay at ENTER_AMOUNT so "b" returns to SELECT_RECV_ASSET
       session.step = SwapStep.ENTER_AMOUNT
       return
     }
@@ -346,13 +346,13 @@ async function handleSelectRecvAsset(
         t(S.selectReceiveAsset, { progress: progress(session) }) +
           '\n\n' +
           assetList(results, session.assetIn?.identifier) +
-          hint('Type /r to reset search or /b to go back.')
+          hint('Type r to reset search or b to go back.')
       )
     } else {
       await send(
         client,
         contactId,
-        'No assets found. Try a different search.\n\n_Type /r to reset search or /b to go back._'
+        'No assets found. Try a different search.\n\n_Type r to reset search or b to go back._'
       )
     }
     return
@@ -419,7 +419,7 @@ async function handleSelectRoute(
     await send(
       client,
       contactId,
-      `Enter a route number (1-${session.routes?.length ?? '?'}).` + hint('Type /b to go back or /c to cancel swap.')
+      `Enter a route number (1-${session.routes?.length ?? '?'}).` + hint('Type b to go back or c to cancel swap.')
     )
     return
   }
@@ -479,8 +479,8 @@ async function handleConfirm(
   session: SimplexSwapSession,
   input: string
 ): Promise<void> {
-  if (input.toLowerCase() !== '/yes' && input.toLowerCase() !== '/y') {
-    await send(client, contactId, '_Type /y to proceed, /b to go back, or /c to cancel swap._')
+  if (input.toLowerCase() !== 'y') {
+    await send(client, contactId, '_Type y to proceed, b to go back, or c to cancel swap._')
     return
   }
   await executeSwap(client, contactId, session)
@@ -646,7 +646,11 @@ async function executeSwap(client: ChatClient, contactId: number, session: Simpl
       caption = caption.replace(/\n[^\n]+\n(\n📍)/, '\n$1')
     if (!refundAddress) caption = caption.replace(/↩️.*\n/g, '')
 
-    await sendImage(client, contactId, base64Data, caption)
+    await sendImage(client, contactId, base64Data, '')
+    await send(client, contactId, caption)
+    await send(client, contactId, `\`${sendAmountRaw}\``)
+    await send(client, contactId, `\`${inboundAddr}\``)
+
     sessions.delete(contactId)
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error'
@@ -731,13 +735,13 @@ export async function handleSwapMessage(client: ChatClient, contactId: number, t
   const lower = input.toLowerCase()
 
   // Global commands (with shortcuts)
-  if (lower === '/cancel' || lower === '/c') {
+  if (lower === 'c') {
     sessions.delete(contactId)
     await send(client, contactId, 'Swap cancelled.')
     return
   }
 
-  if (lower === '/swap' || lower === '/s' || lower === '/start') {
+  if (lower === 's' || lower === '/start') {
     sessions.delete(contactId)
     const session: SimplexSwapSession = {
       step: SwapStep.SELECT_SEND_ASSET,
@@ -748,25 +752,25 @@ export async function handleSwapMessage(client: ChatClient, contactId: number, t
     return
   }
 
-  if (lower === '/faq' || lower === '/f') {
+  if (lower === 'f') {
     await send(client, contactId, S.faq)
     return
   }
 
   const session = sessions.get(contactId)
   if (!session) {
-    await send(client, contactId, 'Commands:\n/s - Start a new swap\n/f - FAQ\n/c - Cancel current swap')
+    await send(client, contactId, 'Commands:\ns - Start a new swap\nf - FAQ\nc - Cancel current swap')
     return
   }
 
   session.lastActivity = Date.now()
 
-  if (lower === '/back' || lower === '/b') {
+  if (lower === 'b') {
     await handleBack(client, contactId, session)
     return
   }
 
-  if (lower === '/reset' || lower === '/r') {
+  if (lower === 'r') {
     if (session.step === SwapStep.SELECT_SEND_ASSET) {
       await showSelectSendAsset(client, contactId, session)
     } else if (session.step === SwapStep.SELECT_RECV_ASSET) {
