@@ -5,7 +5,15 @@ export const SYNC_INTERVAL_MS = 60 * 60 * 1000
 // Must match the token identifier format from the provider API.
 // Full asset details are resolved from the database at runtime.
 // Allowed providers for quoting. Only these will be requested.
-export const ALLOWED_PROVIDERS: string[] = ['THORCHAIN', 'NEAR', 'LETSEXCHANGE', 'QUICKEX', 'STEALTHEX', 'SWAPUZ']
+export const ALLOWED_PROVIDERS: string[] = [
+  'THORCHAIN',
+  'NEAR',
+  'LETSEXCHANGE',
+  'QUICKEX',
+  'STEALTHEX',
+  'SWAPUZ',
+  'EXOLIX'
+]
 
 export const FEATURED_IDENTIFIERS: string[] = [
   'BTC.BTC',

@@ -215,6 +215,14 @@ function validateSui(address: string): boolean {
   return /^0x[a-fA-F0-9]{64}$/.test(address)
 }
 
+function validateZano(address: string): boolean {
+  // Standard: Zx... (97 chars), Integrated: iZ... (109 chars), Auditable: aZx... (98 chars)
+  if (address.startsWith('Zx') && address.length === 97) return MONERO_BASE58.test(address)
+  if (address.startsWith('iZ') && address.length === 109) return MONERO_BASE58.test(address)
+  if (address.startsWith('aZx') && address.length === 98) return MONERO_BASE58.test(address)
+  return false
+}
+
 function validateXrd(address: string): boolean {
   // Radix bech32m: account_rdx1..., resource_rdx1..., etc.
   try {
@@ -246,6 +254,7 @@ const validators: Record<string, (address: string) => boolean> = {
   TON: validateTon,
   NEAR: validateNear,
   SUI: validateSui,
+  ZANO: validateZano,
   XRD: validateXrd,
   GAIA: validateCosmos('cosmos'),
   KUJI: validateCosmos('kujira'),
@@ -280,6 +289,7 @@ const HINTS: Record<string, string> = {
   TON: 'must start with EQ/UQ or be in raw format (0:...)',
   NEAR: 'must be a NEAR account name or 64-character hex',
   SUI: 'must start with 0x and be 66 characters',
+  ZANO: 'must start with Zx, iZ, or aZx',
   XRD: 'must be a valid Radix address',
   GAIA: 'must start with cosmos1',
   KUJI: 'must start with kujira1',

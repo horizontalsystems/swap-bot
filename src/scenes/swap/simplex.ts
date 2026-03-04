@@ -101,7 +101,8 @@ const PROVIDER_RISK: Record<string, string> = {
   STEALTHEX: 'AML, External Liq',
   LETSEXCHANGE: 'AML, External Liq',
   QUICKEX: 'AML, External Liq',
-  NEAR: 'AML, External Liq'
+  NEAR: 'AML, External Liq',
+  EXOLIX: 'AML, External Liq'
 }
 
 function simplexProviderLabel(id: string): string {
@@ -240,7 +241,7 @@ async function fetchAndShowRoutes(
     prog +
       `\n\n${count} quote${count > 1 ? 's' : ''} available 👇\n\n` +
       routeLines.join('\n\n') +
-      `\n\n1-${count} = select route\n` +
+      `\n\n${count === 1 ? '1 = select route' : `1-${count} = select route`}\n` +
       hint('b', 'c').trimStart()
   )
 
