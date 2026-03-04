@@ -15,7 +15,6 @@ import {
   formatAmount,
   formatTime,
   formatUsd,
-  providerLabel,
   providerName,
   shortenAddress,
   truncateToDecimals
@@ -94,6 +93,19 @@ async function sendImage(client: ChatClient, contactId: number, base64Image: str
     console.error(`[SimpleX] Failed to send image to contact ${contactId}:`, err)
     await send(client, contactId, caption)
   }
+}
+
+const PROVIDER_RISK: Record<string, string> = {
+  THORCHAIN: 'DEX 👌',
+  SWAPUZ: 'Private Liq 👌',
+  STEALTHEX: 'AML, External Liq',
+  LETSEXCHANGE: 'AML, External Liq',
+  QUICKEX: 'AML, External Liq',
+  NEAR: 'AML, External Liq'
+}
+
+function simplexProviderLabel(id: string): string {
+  return PROVIDER_RISK[id] ?? id
 }
 
 const HINT_LABELS: Record<string, string> = {
@@ -210,25 +222,26 @@ async function fetchAndShowRoutes(
 
   const { outPrice } = await getSwapPrices(assetIn!.coingeckoId, assetOut!.coingeckoId)
 
+  const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
+
   const routeLines = quoteResponse.routes.map((route, i) => {
     const receiveUsdVal = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmount) : null
+    const num = numEmojis[i] ?? `${i + 1}.`
     return (
-      t(S.quoteLine, {
-        index: i + 1,
-        provider: providerName(route.providers[0]),
-        amount: amt(route.expectedBuyAmount, assetOut!.decimals),
-        ticker: code(assetOut!.ticker),
-        receiveUsd: formatUsd(receiveUsdVal),
-        time: formatTime(route.estimatedTime.total)
-      }) + ` — ${providerLabel(route.providers[0])}`
+      `${num} ${amt(route.expectedBuyAmount, assetOut!.decimals)} ${code(assetOut!.ticker)} ${formatUsd(receiveUsdVal)}\n` +
+      `🕐 ${formatTime(route.estimatedTime.total)}, ${simplexProviderLabel(route.providers[0])}`
     )
   })
 
+  const count = quoteResponse.routes.length
   await send(
     client,
     contactId,
-    t(S.quotesHeader, { progress: prog, count: quoteResponse.routes.length, routes: routeLines.join('\n') }) +
-      hint('b', 'c')
+    prog +
+      `\n\n${count} quote${count > 1 ? 's' : ''} available 👇\n\n` +
+      routeLines.join('\n\n') +
+      `\n\n1-${count} = select route\n` +
+      hint('b', 'c').trimStart()
   )
 
   return true
