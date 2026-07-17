@@ -12,7 +12,9 @@ export const ALLOWED_PROVIDERS: string[] = [
   'QUICKEX',
   'STEALTHEX',
   'SWAPUZ',
-  'EXOLIX'
+  'EXOLIX',
+  'CCE',
+  'PEGASUS'
 ]
 
 export const FEATURED_IDENTIFIERS: string[] = [

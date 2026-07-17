@@ -19,7 +19,9 @@ export const providerTitles: Record<string, string> = {
   STEALTHEX: 'StealthEX',
   QUICKEX: 'QuickEx',
   LETSEXCHANGE: 'LetsExchange',
-  EXOLIX: 'Exolix'
+  EXOLIX: 'Exolix',
+  CCE: 'CCE Cash',
+  PEGASUS: 'PegasusSwap'
 }
 
 export function providerName(id: string): string {
@@ -33,7 +35,9 @@ const providerRisk: Record<string, string> = {
   LETSEXCHANGE: 'AML',
   QUICKEX: 'AML',
   NEAR: 'AML',
-  EXOLIX: 'AML'
+  EXOLIX: 'AML',
+  CCE: 'AML',
+  PEGASUS: 'AML'
 }
 
 export function providerLabel(id: string): string {
