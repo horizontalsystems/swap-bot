@@ -39,6 +39,19 @@ export async function syncTokens(): Promise<void> {
   }
 }
 
+// Startup variant: if the API is down but we already have tokens from a
+// previous sync, start anyway instead of crash-looping until the API recovers.
+export async function syncTokensAtStartup(): Promise<void> {
+  try {
+    await syncTokens()
+  } catch (error) {
+    if (getTokenCount() === 0) {
+      throw error
+    }
+    console.error(`[Sync] Startup sync failed, continuing with ${getTokenCount()} cached tokens:`, error)
+  }
+}
+
 export function startPeriodicSync(): void {
   if (syncInterval) {
     clearInterval(syncInterval)

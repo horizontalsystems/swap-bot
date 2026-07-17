@@ -2,7 +2,7 @@ import { Scenes, session, Telegraf } from 'telegraf'
 import dotenv from 'dotenv'
 import { SwapContext } from './types/context'
 import { swapWizard } from './scenes/swap'
-import { startPeriodicSync, stopPeriodicSync, syncTokens } from './services/token-sync'
+import { startPeriodicSync, stopPeriodicSync, syncTokensAtStartup } from './services/token-sync'
 import { closeDb } from './db/database'
 import { s } from './config/strings'
 
@@ -48,7 +48,7 @@ bot.command('cancel', ctx => {
 async function main() {
   // Sync token lists before starting the bot
   console.log('🔄 Syncing token lists...')
-  await syncTokens()
+  await syncTokensAtStartup()
 
   // Start periodic sync (every hour)
   startPeriodicSync()
@@ -84,8 +84,12 @@ async function main() {
     console.warn('[Bot] setMyCommands failed (rate-limited?), skipping:', (err as Error).message)
   }
 
-  // Launch bot
-  bot.launch()
+  // Launch bot. launch() resolves only on shutdown; a rejection means polling
+  // died fatally — exit so the process manager restarts us.
+  bot.launch().catch(err => {
+    console.error('[Bot] Polling stopped with error:', err)
+    process.exit(1)
+  })
   console.log('🚀 SwapBot is running...')
 }
 

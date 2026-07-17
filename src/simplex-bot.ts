@@ -1,7 +1,7 @@
 import { ChatClient } from 'simplex-chat'
 import { CEvt, ChatEvent } from '@simplex-chat/types'
 import dotenv from 'dotenv'
-import { startPeriodicSync, stopPeriodicSync, syncTokens } from './services/token-sync'
+import { startPeriodicSync, stopPeriodicSync, syncTokensAtStartup } from './services/token-sync'
 import { closeDb } from './db/database'
 import { cleanupSessions, handleSwapMessage } from './scenes/swap/simplex'
 
@@ -84,7 +84,7 @@ async function eventLoop(): Promise<void> {
 
 async function main(): Promise<void> {
   console.log('[SimpleX] Syncing token lists...')
-  await syncTokens()
+  await syncTokensAtStartup()
   startPeriodicSync()
 
   console.log(`[SimpleX] Connecting to ${SIMPLEX_WS_URL}...`)
@@ -115,6 +115,12 @@ async function main(): Promise<void> {
 
   console.log('[SimpleX] Bot is running!')
   await eventLoop()
+
+  // The event loop only ends when the websocket to the SimpleX CLI is lost.
+  // The sync/cleanup intervals would keep the process alive in a zombie state,
+  // so exit with an error and let pm2 restart us with a fresh connection.
+  console.error('[SimpleX] Connection lost, exiting so process manager can restart')
+  process.exit(1)
 }
 
 main().catch(err => {
