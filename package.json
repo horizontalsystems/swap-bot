@@ -7,7 +7,8 @@
     "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/bot.js",
-    "start:simplex": "node dist/simplex-bot.js"
+    "start:simplex": "node dist/simplex-bot.js",
+    "start:signal": "node dist/signal-bot.js"
   },
   "keywords": [],
   "author": "",

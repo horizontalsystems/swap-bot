@@ -33,6 +33,11 @@ module.exports = {
       name: 'swap-bot-simplex',
       script: 'dist/simplex-bot.js',
       ...shared
+    },
+    {
+      name: 'swap-bot-signal',
+      script: 'dist/signal-bot.js',
+      ...shared
     }
   ]
 }
