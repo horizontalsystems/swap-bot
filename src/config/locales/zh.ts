@@ -89,6 +89,8 @@ export const zh: Strings = {
   swapFailedNoRoutes: '❌ 兑换失败 — 没有可用路线。',
   swapNoQr: '❌ 兑换已确认，但未收到二维码。\n请联系客服。',
   swapConfirmError: '❌ 兑换失败: {error}',
+  amlBlocked:
+    '⛔ 无法进行此兑换 — 地址 {address} 被第三方合规服务商 (Elliptic) 标记为高风险。请使用其他地址重新发起兑换。',
 
   // --- Cancel / misc ---
   swapCancelled: '❌ 兑换已取消。',

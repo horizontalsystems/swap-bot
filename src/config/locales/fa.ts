@@ -95,6 +95,8 @@ export const fa: Strings = {
   swapFailedNoRoutes: '❌ تبادل ناموفق — مسیری در دسترس نیست.',
   swapNoQr: '❌ تبادل تأیید شد اما کد QR دریافت نشد.\nلطفاً با پشتیبانی تماس بگیرید.',
   swapConfirmError: '❌ خطای تبادل: {error}',
+  amlBlocked:
+    '⛔ این تبادل قابل انجام نیست — آدرس {address} توسط ارائه‌دهنده انطباق شخص ثالث (Elliptic) پرخطر شناسایی شده است. لطفاً با آدرس دیگری یک تبادل جدید آغاز کنید.',
 
   // --- Cancel / misc ---
   swapCancelled: '❌ تبادل لغو شد.',

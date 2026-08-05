@@ -94,6 +94,8 @@ export const en = {
   swapFailedNoRoutes: '❌ Swap failed — no routes available.',
   swapNoQr: '❌ Swap confirmed but no QR code received.\nPlease contact support.',
   swapConfirmError: '❌ Swap failed: {error}',
+  amlBlocked:
+    "⛔ This swap can't proceed — the address {address} is flagged as high-risk by a third-party compliance provider (Elliptic). Please start a new swap with a different address.",
 
   // --- Cancel / misc ---
   swapCancelled: '❌ Swap cancelled.',

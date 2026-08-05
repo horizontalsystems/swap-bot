@@ -6,7 +6,7 @@ import { s, t } from '../../config/strings'
 import { getAssets, getProvidersForPair, searchAssets } from '../../db/tokens'
 import { Asset, QuoteRoute, SwapSessionData } from '../../types/context'
 import { getAssetPrice, getSwapPrices } from '../../services/prices'
-import { fetchQuote } from '../../utils/api'
+import { amlFlaggedAddress, fetchQuote } from '../../utils/api'
 import { preflightMemoless, registerMemoless } from '../../utils/memoless-api'
 import { validateAddress } from '../../utils/addressValidator'
 import { SignalRpcClient } from '../../utils/signal-rpc'
@@ -533,6 +533,14 @@ async function executeSwap(client: SignalRpcClient, recipient: string, session: 
 
   if (!assetIn || !assetOut || !amount || !destinationAddress || !quote || (!isThorChain && !refundAddress)) {
     await send(client, recipient, S.sessionExpired)
+    sessions.delete(recipient)
+    return
+  }
+
+  // AML precheck — block flagged addresses before committing the order
+  const flaggedAddress = await amlFlaggedAddress(quote.providers[0], [refundAddress, destinationAddress])
+  if (flaggedAddress) {
+    await send(client, recipient, t(S.amlBlocked, { address: shortenAddress(flaggedAddress) }))
     sessions.delete(recipient)
     return
   }

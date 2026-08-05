@@ -109,3 +109,38 @@ export async function fetchQuote(params: QuoteParams): Promise<QuoteResponse> {
 export async function fetchAllTokens(): Promise<TokenListItem[]> {
   return apiRequest<TokenListItem[]>('/tokens/all')
 }
+
+// --- AML precheck ---
+
+// QUICKEX is the only provider that exposes the AML address precheck
+const AML_PRECHECK_PROVIDERS = ['QUICKEX', 'THORCHAIN']
+
+interface AmlCheckResponse {
+  // true = all passed, false = at least one flagged, null = inconclusive
+  passedAmlCheck: boolean | null
+  results: { address: string; passed?: boolean; completed?: boolean; error?: string }[]
+}
+
+export async function checkAddresses(addresses: string[]): Promise<AmlCheckResponse> {
+  const query = addresses.map(encodeURIComponent).join(',')
+  return apiRequest<AmlCheckResponse>(`/quote/check-addresses?addresses=${query}`)
+}
+
+// Returns the flagged address when the swap must be blocked, otherwise null.
+// Non-precheck providers, an inconclusive (null) result, or a service error never block.
+export async function amlFlaggedAddress(provider: string, addresses: (string | undefined)[]): Promise<string | null> {
+  if (!AML_PRECHECK_PROVIDERS.includes(provider)) return null
+
+  const list = addresses.filter((a): a is string => !!a)
+  if (list.length === 0) return null
+
+  try {
+    const { passedAmlCheck, results } = await checkAddresses(list)
+    if (passedAmlCheck !== false) return null
+    // the server stops at the first failed address, so it's the one to surface
+    return results.find(r => r.passed === false)?.address ?? list[0]
+  } catch (error) {
+    console.error('[AML] precheck failed, allowing swap:', error)
+    return null
+  }
+}

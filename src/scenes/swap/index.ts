@@ -5,7 +5,7 @@ import { s, t } from '../../config/strings'
 import { getAssetByIdentifier, getAssets, getProvidersForPair, searchAssets } from '../../db/tokens'
 import { SwapContext } from '../../types/context'
 import { getAssetPrice, getSwapPrices } from '../../services/prices'
-import { fetchQuote } from '../../utils/api'
+import { amlFlaggedAddress, fetchQuote } from '../../utils/api'
 import { preflightMemoless, registerMemoless } from '../../utils/memoless-api'
 import { validateAddress } from '../../utils/addressValidator'
 import {
@@ -570,6 +570,13 @@ swapWizard.action('confirm_swap', async ctx => {
   }
 
   await ctx.answerCbQuery(S.processingSwap)
+
+  // AML precheck — block flagged addresses before committing the order
+  const flaggedAddress = await amlFlaggedAddress(quote.providers[0], [refundAddress, destinationAddress])
+  if (flaggedAddress) {
+    await ctx.editMessageText(t(S.amlBlocked, { address: shortenAddress(flaggedAddress) }), { parse_mode: 'Markdown' })
+    return ctx.scene.leave()
+  }
 
   const { inPrice, outPrice } = await getSwapPrices(assetIn.coingeckoId, assetOut.coingeckoId)
   const sendUsdVal = inPrice != null ? inPrice * amount : null
