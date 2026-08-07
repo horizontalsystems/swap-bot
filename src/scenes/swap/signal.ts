@@ -153,6 +153,26 @@ const HINT_LABELS: Record<string, string> = {
   f: 'f = FAQ'
 }
 
+// Full-word aliases for the single-letter commands, so "cancel" works like "c".
+const COMMAND_ALIASES: Record<string, string> = {
+  cancel: 'c',
+  start: 's',
+  '/start': 's',
+  back: 'b',
+  reset: 'r',
+  yes: 'y',
+  faq: 'f'
+}
+
+const COMMANDS_HELP =
+  '⌨️ *Commands*\n\n' +
+  's / start — new swap\n' +
+  'b / back — previous step\n' +
+  'c / cancel — cancel swap\n' +
+  'r / reset — reset search\n' +
+  'y / yes — confirm swap\n' +
+  'f / faq — show this FAQ'
+
 function hint(...keys: string[]): string {
   return '\n\n' + keys.map(k => HINT_LABELS[k] ?? k).join('\n')
 }
@@ -522,7 +542,8 @@ async function handleConfirm(
   session: SignalSwapSession,
   input: string
 ): Promise<void> {
-  if (input.toLowerCase() !== 'y') {
+  const answer = input.toLowerCase()
+  if (answer !== 'y' && answer !== 'yes') {
     await send(client, recipient, hint('y', 'b', 'c').trim())
     return
   }
@@ -781,15 +802,17 @@ async function handleBack(client: SignalRpcClient, recipient: string, session: S
 export async function handleSwapMessage(client: SignalRpcClient, recipient: string, text: string): Promise<void> {
   const input = text.trim()
   const lower = input.toLowerCase()
+  // Accept full words ("cancel", "back", "start") as well as single letters.
+  const cmd = COMMAND_ALIASES[lower] ?? lower
 
   // Global commands (with shortcuts)
-  if (lower === 'c') {
+  if (cmd === 'c') {
     sessions.delete(recipient)
     await send(client, recipient, 'Swap cancelled.')
     return
   }
 
-  if (lower === 's' || lower === '/start') {
+  if (cmd === 's') {
     sessions.delete(recipient)
     const session: SignalSwapSession = {
       step: SwapStep.SELECT_SEND_ASSET,
@@ -800,25 +823,25 @@ export async function handleSwapMessage(client: SignalRpcClient, recipient: stri
     return
   }
 
-  if (lower === 'f') {
-    await send(client, recipient, S.faq)
+  if (cmd === 'f') {
+    await send(client, recipient, S.faq + '\n\n' + COMMANDS_HELP)
     return
   }
 
   const session = sessions.get(recipient)
   if (!session) {
-    await send(client, recipient, 'Commands:\n\ns = start a new swap\nf = FAQ')
+    await send(client, recipient, COMMANDS_HELP)
     return
   }
 
   session.lastActivity = Date.now()
 
-  if (lower === 'b') {
+  if (cmd === 'b') {
     await handleBack(client, recipient, session)
     return
   }
 
-  if (lower === 'r') {
+  if (cmd === 'r') {
     if (session.step === SwapStep.SELECT_SEND_ASSET) {
       await showSelectSendAsset(client, recipient, session)
     } else if (session.step === SwapStep.SELECT_RECV_ASSET) {
