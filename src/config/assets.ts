@@ -5,6 +5,13 @@ export const SYNC_INTERVAL_MS = 60 * 60 * 1000
 // Must match the token identifier format from the provider API.
 // Full asset details are resolved from the database at runtime.
 // Allowed providers for quoting. Only these will be requested.
+//
+// The bot has no wallet: it can only tell a user where to send funds. So this list may
+// only hold providers whose v2 `executionType` is `transfer` (the user makes a plain
+// transfer to a deposit address) — plus THORCHAIN, whose `thorchain_deposit` needs a memo
+// bound to the deposit and is served through the memoless flow instead. Anything that
+// executes via `signed_transaction` or `stellar_broker` needs a signer and cannot be
+// offered here; `GET /v2/providers` reports each provider's `executionType`.
 export const ALLOWED_PROVIDERS: string[] = [
   'THORCHAIN',
   'NEAR',

@@ -1,6 +1,6 @@
 import { Markup } from 'telegraf'
 import { Strings, t } from '../../config/strings'
-import { Asset, SwapContext, SwapSessionData } from '../../types/context'
+import { Asset, Attachment, QuoteRoute, SwapContext, SwapSessionData } from '../../types/context'
 
 export function cancelButtonRow(S: Strings) {
   return [Markup.button.callback(S.cancelSwap, 'cancel_swap')]
@@ -191,12 +191,17 @@ export function buildProgress(session: SwapSessionData, S: Strings): string {
   return lines.join('\n')
 }
 
+/**
+ * The track page tracks by the committed route's `uuid` (v2 `POST /v2/track`) — everything
+ * else is display context it renders alongside the status. No uuid means the swap was
+ * recorded without one and cannot be tracked, so there is no link to offer.
+ */
 export function buildTrackUrl(
-  provider: string,
+  uuid: string | undefined,
   opts: {
-    inboundAddr?: string
+    provider: string
+    depositAddress?: string
     chainId?: string | null
-    providerSwapId?: string
     fromAsset?: string
     fromAmount?: string
     toAsset?: string
@@ -205,18 +210,14 @@ export function buildTrackUrl(
     refundAddress?: string
   }
 ): string | null {
+  if (!uuid) return null
+
   const base = 'https://swap.unstoppable.money/track'
   const params = new URLSearchParams()
-  params.set('provider', provider)
+  params.set('uuid', uuid)
+  params.set('provider', opts.provider)
 
-  if (provider === 'THORCHAIN' || provider === 'NEAR') {
-    if (!opts.inboundAddr) return null
-    params.set('depositAddress', opts.inboundAddr)
-  } else {
-    if (!opts.providerSwapId) return null
-    params.set('providerSwapId', opts.providerSwapId)
-  }
-
+  if (opts.depositAddress) params.set('depositAddress', opts.depositAddress)
   if (opts.chainId) params.set('chainId', opts.chainId)
   if (opts.fromAsset) params.set('fromAsset', opts.fromAsset)
   if (opts.fromAmount) params.set('fromAmount', opts.fromAmount)
@@ -226,6 +227,86 @@ export function buildTrackUrl(
   if (opts.refundAddress) params.set('refundAddress', opts.refundAddress)
 
   return `${base}?${params.toString()}`
+}
+
+// --- Committed route → what the user must send ---
+
+export interface DepositInstructions {
+  depositAddress: string
+  /** The amount the provider expects, authoritative over what the user typed. */
+  amount: string
+  qrDataURL?: string
+  qrStr?: string
+  attachment?: Attachment
+}
+
+/**
+ * Reads a committed route's `execution` block. Only `transfer` routes resolve here — a
+ * THORChain route's memo has to be bound to the deposit, which a user sending from a
+ * plain wallet can't do, so those run through the memoless flow instead (utils/memoless-api).
+ * The remaining methods need a wallet to sign with and never reach the bot.
+ */
+export function depositInstructions(route: QuoteRoute): DepositInstructions | null {
+  const execution = route.execution
+  if (!execution || execution.method !== 'transfer') return null
+
+  return {
+    depositAddress: execution.depositAddress,
+    amount: execution.amount,
+    qrDataURL: execution.qr?.dataURL,
+    qrStr: execution.qr?.str,
+    attachment: execution.attachment
+  }
+}
+
+/** The memo a THORChain route needs bound to its deposit, for the memoless flow. */
+export function thorchainMemo(route: QuoteRoute): string | null {
+  const execution = route.execution
+  if (!execution || execution.method !== 'thorchain_deposit') return null
+  return execution.memo
+}
+
+/** Seconds left on the route's rate lock — `expiresAt` is epoch **milliseconds** in v2. */
+export function expiresInSeconds(route: QuoteRoute): number | undefined {
+  if (route.expiresAt == null) return undefined
+  return Math.max(0, Math.floor((route.expiresAt - Date.now()) / 1000))
+}
+
+export function attachmentLabel(attachment: Attachment, S: Strings): string {
+  return attachment.type === 'destination_tag' ? S.attachmentTag : S.attachmentMemo
+}
+
+/** How a scene renders amounts — plain on Telegram, backticked on SimpleX/Signal. */
+export interface AmountFormatter {
+  amount(value: number | string, decimals?: number | null): string
+  asset(asset: Asset): string
+}
+
+/**
+ * The row between "Receive" and the destination block. Three outcomes, because v2's
+ * `minBuyAmount` is only present when something actually enforces a floor:
+ *   absent  → the quote is an estimate, re-priced when the deposit lands — say so
+ *   equal   → nothing to add beyond the expected amount
+ *   lower   → the guaranteed minimum
+ * Carries its own trailing newline so an omitted row collapses cleanly — see the
+ * `{minLine}` slot in the locales.
+ */
+export function buildMinLine(
+  S: Strings,
+  route: QuoteRoute,
+  assetOut: Asset,
+  outPrice: number | null,
+  format: AmountFormatter
+): string {
+  const min = route.minBuyAmount
+  if (min == null) return `${S.estimateLine}\n`
+  if (min === route.expectedBuyAmount) return ''
+
+  return `${t(S.minReceiveLine, {
+    amount: format.amount(min, assetOut.decimals),
+    asset: format.asset(assetOut),
+    usd: formatUsd(outPrice != null ? outPrice * parseFloat(min) : null)
+  })}\n`
 }
 
 export async function editSwapMessage(ctx: SwapContext, text: string, extra?: Record<string, unknown>) {

@@ -47,13 +47,19 @@ export const fa: Strings = {
   quoteLine: '{index}. {amount} {ticker} {receiveUsd} • 🕐 {time}',
   quoteError: '💱 تبادل\n\n{progress}\n\n❌ خطا در دریافت قیمت: {error}',
 
+  // --- Receive floor ---
+  // `{minLine}` is built in code (see buildMinLine) and carries its own trailing newline,
+  // so it collapses to nothing when the route has no floor worth showing.
+  minReceiveLine: 'حداقل‌: {amount} {asset} {usd}',
+  estimateLine: 'حداقل‌: تضمین‌نشده — مبلغ نهایی هنگام رسیدن واریز شما تعیین می‌شود',
+
   // --- Swap summary (confirm screen) ---
   swapSummary:
     '📋 خلاصه تبادل\n' +
     '━━━━━━━━━━━━━━━\n' +
     'ارسال: {sendAmount} {sendAsset} {sendUsd}\n' +
     'دریافت: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    'حداقل‌: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '{minLine}\n' +
     '📍 مقصد: {destination}\n' +
     '↩️ بازگشت: {refund}\n' +
     '🔗 ارائه‌دهنده: {provider} • {time}\n' +
@@ -67,7 +73,7 @@ export const fa: Strings = {
     '━━━━━━━━━━━━━━━\n' +
     'ارسال: {sendAmount} {sendAsset} {sendUsd}\n' +
     'دریافت: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    'حداقل‌: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '{minLine}\n' +
     '📍 مقصد: {destination}\n' +
     '↩️ بازگشت: {refund}\n' +
     '🔗 ارائه‌دهنده: {provider} • {time}\n' +
@@ -77,8 +83,12 @@ export const fa: Strings = {
     '`{sendAmountRaw}` {sendAsset}\n\n' +
     'به آدرس:\n' +
     '`{inboundAddress}`' +
+    '{attachment}' +
     '{warning}' +
     '{links}',
+  depositAttachment: '\n\n⚠️ {label} — الزامی است، بدون آن وجه از دست می‌رود:\n`{value}`',
+  attachmentTag: 'Destination tag',
+  attachmentMemo: 'Memo',
 
   // --- Swap errors ---
   preparingSwap:
@@ -86,14 +96,14 @@ export const fa: Strings = {
     '━━━━━━━━━━━━━━━\n' +
     'ارسال: {sendAmount} {sendAsset} {sendUsd}\n' +
     'دریافت: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    'حداقل‌: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '{minLine}\n' +
     '📍 مقصد: {destination}\n' +
     '↩️ بازگشت: {refund}\n' +
     '🔗 ارائه‌دهنده: {provider} • {time}\n' +
     '━━━━━━━━━━━━━━━\n' +
     '⏳ در حال آماده‌سازی تبادل...',
   swapFailedNoRoutes: '❌ تبادل ناموفق — مسیری در دسترس نیست.',
-  swapNoQr: '❌ تبادل تأیید شد اما کد QR دریافت نشد.\nلطفاً با پشتیبانی تماس بگیرید.',
+  swapNoQr: '❌ تبادل تأیید شد اما دستورالعمل واریز دریافت نشد.\nلطفاً با پشتیبانی تماس بگیرید.',
   swapConfirmError: '❌ خطای تبادل: {error}',
   amlBlocked:
     '⛔ این تبادل قابل انجام نیست — آدرس {address} توسط ارائه‌دهنده انطباق شخص ثالث (Elliptic) پرخطر شناسایی شده است. لطفاً با آدرس دیگری یک تبادل جدید آغاز کنید.',

@@ -46,13 +46,19 @@ export const en = {
   quoteLine: '{index}. {amount} {ticker} {receiveUsd} • 🕐 {time}',
   quoteError: '💱 Swap\n\n{progress}\n\n❌ Failed to fetch quote: {error}',
 
+  // --- Receive floor ---
+  // `{minLine}` is built in code (see buildMinLine) and carries its own trailing newline,
+  // so it collapses to nothing when the route has no floor worth showing.
+  minReceiveLine: 'Min: {amount} {asset} {usd}',
+  estimateLine: 'Min: Not guaranteed — the final amount is set when your deposit arrives',
+
   // --- Swap summary (confirm screen) ---
   swapSummary:
     '📋 Swap Summary\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Send: {sendAmount} {sendAsset} {sendUsd}\n' +
     'Receive: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    'Min: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '{minLine}\n' +
     '📍 Destination: {destination}\n' +
     '↩️ Refund: {refund}\n' +
     '🔗 Provider: {provider} • {time}\n' +
@@ -66,7 +72,7 @@ export const en = {
     '━━━━━━━━━━━━━━━\n' +
     'Send: {sendAmount} {sendAsset} {sendUsd}\n' +
     'Receive: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    'Min: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '{minLine}\n' +
     '📍 Destination: {destination}\n' +
     '↩️ Refund: {refund}\n' +
     '🔗 Provider: {provider} • {time}\n' +
@@ -76,8 +82,12 @@ export const en = {
     '`{sendAmountRaw}` {sendAsset}\n\n' +
     'To address:\n' +
     '`{inboundAddress}`' +
+    '{attachment}' +
     '{warning}' +
     '{links}',
+  depositAttachment: '\n\n⚠️ {label} — required, send without it and the funds are lost:\n`{value}`',
+  attachmentTag: 'Destination tag',
+  attachmentMemo: 'Memo',
 
   // --- Swap errors ---
   preparingSwap:
@@ -85,14 +95,14 @@ export const en = {
     '━━━━━━━━━━━━━━━\n' +
     'Send: {sendAmount} {sendAsset} {sendUsd}\n' +
     'Receive: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    'Min: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '{minLine}\n' +
     '📍 Destination: {destination}\n' +
     '↩️ Refund: {refund}\n' +
     '🔗 Provider: {provider} • {time}\n' +
     '━━━━━━━━━━━━━━━\n' +
     '⏳ Preparing swap...',
   swapFailedNoRoutes: '❌ Swap failed — no routes available.',
-  swapNoQr: '❌ Swap confirmed but no QR code received.\nPlease contact support.',
+  swapNoQr: '❌ Swap confirmed but no deposit instructions received.\nPlease contact support.',
   swapConfirmError: '❌ Swap failed: {error}',
   amlBlocked:
     "⛔ This swap can't proceed — the address {address} is flagged as high-risk by a third-party compliance provider (Elliptic). Please start a new swap with a different address.",

@@ -5,19 +5,24 @@ import { s, t } from '../../config/strings'
 import { getAssetByIdentifier, getAssets, getProvidersForPair, searchAssets } from '../../db/tokens'
 import { SwapContext } from '../../types/context'
 import { getAssetPrice, getSwapPrices } from '../../services/prices'
-import { amlFlaggedAddress, fetchQuote } from '../../utils/api'
+import { amlFlaggedAddress, fetchRate, fetchSwap } from '../../utils/api'
 import { preflightMemoless, registerMemoless } from '../../utils/memoless-api'
 import { validateAddress } from '../../utils/addressValidator'
 import {
+  AmountFormatter,
   assetCaption,
   assetKeyboard,
+  attachmentLabel,
   backCancelRow,
+  buildMinLine,
   buildProgress,
   buildTrackUrl,
   clearSearchCancelRow,
   deleteSwapMessage,
   deleteUserMessage,
+  depositInstructions,
   editSwapMessage,
+  expiresInSeconds,
   formatAmount,
   formatTime,
   formatUsd,
@@ -25,8 +30,13 @@ import {
   providerName,
   searchResultsKeyboard,
   shortenAddress,
+  thorchainMemo,
   truncateToDecimals
 } from './helpers'
+
+// Telegram renders amounts inline, without the copy-friendly backticks the
+// SimpleX/Signal flows wrap them in.
+const format: AmountFormatter = { amount: formatAmount, asset: assetCaption }
 
 // --- Helpers ---
 
@@ -83,12 +93,11 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
 
   await editSwapMessage(ctx, t(S.fetchingQuotes, { progress }))
 
-  const quoteResponse = await fetchQuote({
+  const quoteResponse = await fetchRate({
     sellAsset: assetIn!.identifier,
     buyAsset: assetOut!.identifier,
     sellAmount: amount!.toString(),
-    providers,
-    dry: true
+    providers
   })
 
   if (!quoteResponse.routes || quoteResponse.routes.length === 0) {
@@ -143,7 +152,6 @@ async function showSummary(ctx: SwapContext) {
   const { inPrice, outPrice } = await getSwapPrices(assetIn!.coingeckoId, assetOut!.coingeckoId)
   const sendUsdVal = inPrice != null ? inPrice * amount! : null
   const receiveUsdVal = outPrice != null ? outPrice * parseFloat(quote!.expectedBuyAmount) : null
-  const minReceiveUsdVal = outPrice != null ? outPrice * parseFloat(quote!.expectedBuyAmountMaxSlippage) : null
 
   let summaryText = t(S.swapSummary, {
     sendAmount: formatAmount(amount!, assetIn!.decimals),
@@ -152,15 +160,12 @@ async function showSummary(ctx: SwapContext) {
     receiveAmount: formatAmount(quote!.expectedBuyAmount, assetOut!.decimals),
     receiveAsset: assetCaption(assetOut!),
     receiveUsd: formatUsd(receiveUsdVal),
-    minReceive: formatAmount(quote!.expectedBuyAmountMaxSlippage, assetOut!.decimals),
-    minReceiveUsd: formatUsd(minReceiveUsdVal),
+    minLine: buildMinLine(S, quote!, assetOut!, outPrice, format),
     destination: shortenAddress(destinationAddress!),
     refund: refundAddress ? shortenAddress(refundAddress) : '',
     provider: providerName(quote!.providers[0]),
     time: formatTime(quote!.estimatedTime.total)
   })
-  if (quote!.expectedBuyAmount === quote!.expectedBuyAmountMaxSlippage)
-    summaryText = summaryText.replace(/\n[^\n]+\n(\n📍)/, '\n$1')
   if (!refundAddress) summaryText = summaryText.replace(/↩️.*\n/g, '')
 
   await editSwapMessage(ctx, summaryText, {
@@ -558,7 +563,7 @@ swapWizard.action(/^route_(\d+)$/, async ctx => {
   return ctx.wizard.next()
 })
 
-// Confirm swap — call API with dry: false
+// Confirm swap — commit the order with POST /v2/swap
 swapWizard.action('confirm_swap', async ctx => {
   const S = s(ctx.from?.language_code)
   const { assetIn, assetOut, amount, destinationAddress, refundAddress, quote } = ctx.scene.session
@@ -581,7 +586,6 @@ swapWizard.action('confirm_swap', async ctx => {
   const { inPrice, outPrice } = await getSwapPrices(assetIn.coingeckoId, assetOut.coingeckoId)
   const sendUsdVal = inPrice != null ? inPrice * amount : null
   const receiveUsdVal = outPrice != null ? outPrice * parseFloat(quote.expectedBuyAmount) : null
-  const minReceiveUsdVal = outPrice != null ? outPrice * parseFloat(quote.expectedBuyAmountMaxSlippage) : null
 
   let preparingText = t(S.preparingSwap, {
     sendAmount: formatAmount(amount, assetIn.decimals),
@@ -590,38 +594,27 @@ swapWizard.action('confirm_swap', async ctx => {
     receiveAmount: formatAmount(quote.expectedBuyAmount, assetOut.decimals),
     receiveAsset: assetCaption(assetOut),
     receiveUsd: formatUsd(receiveUsdVal),
-    minReceive: formatAmount(quote.expectedBuyAmountMaxSlippage, assetOut.decimals),
-    minReceiveUsd: formatUsd(minReceiveUsdVal),
+    minLine: buildMinLine(S, quote, assetOut, outPrice, format),
     destination: shortenAddress(destinationAddress),
     refund: refundAddress ? shortenAddress(refundAddress) : '',
     provider: providerName(quote.providers[0]),
     time: formatTime(quote.estimatedTime.total)
   })
-  if (quote.expectedBuyAmount === quote.expectedBuyAmountMaxSlippage)
-    preparingText = preparingText.replace(/\n[^\n]+\n(\n📍)/, '\n$1')
   if (!refundAddress) preparingText = preparingText.replace(/↩️.*\n/g, '')
 
   await ctx.editMessageText(preparingText, { parse_mode: 'Markdown' })
 
   try {
-    const quoteParams: Parameters<typeof fetchQuote>[0] = {
+    const swapParams: Parameters<typeof fetchSwap>[0] = {
       sellAsset: assetIn.identifier,
       buyAsset: assetOut.identifier,
       sellAmount: amount.toString(),
       destinationAddress,
-      providers: quote.providers,
-      dry: false
+      provider: quote.providers[0]
     }
-    if (refundAddress) quoteParams.refundAddress = refundAddress
+    if (refundAddress) swapParams.refundAddress = refundAddress
 
-    const quoteResponse = await fetchQuote(quoteParams)
-
-    if (!quoteResponse.routes || quoteResponse.routes.length === 0) {
-      await ctx.editMessageText(S.swapFailedNoRoutes)
-      return ctx.scene.leave()
-    }
-
-    const route = quoteResponse.routes[0]
+    const route = await fetchSwap(swapParams)
     const isThorchain = route.providers[0] === 'THORCHAIN'
 
     let qrDataURL: string | undefined
@@ -630,11 +623,14 @@ swapWizard.action('confirm_swap', async ctx => {
     let sendAmount: number = amount
     let sendAmountRaw: string = amount.toString()
     let expiresIn: number | undefined
+    let attachmentNote = ''
 
     if (isThorchain) {
       console.log('[Swap] THORChain route detected, using memoless flow')
 
-      const memo = route.memo
+      // The user can't bind the swap memo to a plain transfer, so memoless encodes it
+      // in the amount and relays the deposit for them.
+      const memo = thorchainMemo(route)
       if (!memo) {
         console.error('[Swap] No memo found in route for THORChain')
         await ctx.editMessageText(S.swapNoQr)
@@ -663,27 +659,32 @@ swapWizard.action('confirm_swap', async ctx => {
       paymentUri = preflightData.data.qr_code
       console.log('[Swap] Memoless flow complete — inbound:', inboundAddr, 'sendAmount:', sendAmount)
     } else {
-      qrDataURL = route.qrCodeDataURL
-      paymentUri = route.qrCodeStr
-      inboundAddr = route.inboundAddress || route.targetAddress
-      if (route.expiration) {
-        expiresIn = Math.max(0, Math.floor(parseInt(route.expiration, 10) - Date.now() / 1000))
+      const deposit = depositInstructions(route)
+      if (!deposit) {
+        console.error('[Swap] Route has no transfer execution:', route.execution?.method)
+        await ctx.editMessageText(S.swapNoQr)
+        return ctx.scene.leave()
+      }
+
+      qrDataURL = deposit.qrDataURL
+      paymentUri = deposit.qrStr
+      inboundAddr = deposit.depositAddress
+      sendAmount = parseFloat(deposit.amount)
+      sendAmountRaw = deposit.amount
+      expiresIn = expiresInSeconds(route)
+
+      // An order identifier the provider matches the deposit by. Present ⟺ required:
+      // a transfer that omits it arrives unattributed and is normally unrecoverable.
+      if (deposit.attachment) {
+        attachmentNote = t(S.depositAttachment, {
+          label: attachmentLabel(deposit.attachment, S),
+          value: deposit.attachment.value
+        })
       }
     }
 
-    if (!qrDataURL) {
-      await ctx.editMessageText(S.swapNoQr)
-      return ctx.scene.leave()
-    }
-
-    // Convert data URL to Buffer
-    const base64Data = qrDataURL.replace(/^data:image\/png;base64,/, '')
-    const qrBuffer = Buffer.from(base64Data, 'base64')
-
     const confirmSendUsd = inPrice != null ? inPrice * sendAmount : null
     const confirmReceiveUsd = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmount) : null
-
-    const confirmMinReceiveUsd = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmountMaxSlippage) : null
 
     const warning = isThorchain ? `\n\n${S.amountWarning}` : ''
 
@@ -693,10 +694,10 @@ swapWizard.action('confirm_swap', async ctx => {
     if (paymentLink) links.push(`📲 [${S.openWalletApp}](${paymentLink})`)
 
     const provider = route.providers[0]
-    const trackUrl = buildTrackUrl(provider, {
-      inboundAddr: inboundAddr,
+    const trackUrl = buildTrackUrl(route.uuid, {
+      provider,
+      depositAddress: inboundAddr,
       chainId: assetIn.chainId,
-      providerSwapId: route.providerSwapId,
       fromAsset: assetIn.identifier,
       fromAmount: sendAmount.toString(),
       toAsset: assetOut.identifier,
@@ -714,23 +715,29 @@ swapWizard.action('confirm_swap', async ctx => {
       receiveAmount: formatAmount(route.expectedBuyAmount, assetOut.decimals),
       receiveAsset: assetCaption(assetOut),
       receiveUsd: formatUsd(confirmReceiveUsd),
-      minReceive: formatAmount(route.expectedBuyAmountMaxSlippage, assetOut.decimals),
-      minReceiveUsd: formatUsd(confirmMinReceiveUsd),
+      minLine: buildMinLine(S, route, assetOut, outPrice, format),
       destination: shortenAddress(destinationAddress),
       refund: refundAddress ? shortenAddress(refundAddress) : '',
       inboundAddress: inboundAddr ?? '',
       provider: route.providers.map(p => providerName(p)).join(', '),
       time: formatTime(route.estimatedTime.total),
       expiration: expiresIn != null ? formatTime(expiresIn) : 'N/A',
+      attachment: attachmentNote,
       warning,
       links: links.length ? `\n\n${links.join(' • ')}` : ''
     })
-    if (route.expectedBuyAmount === route.expectedBuyAmountMaxSlippage)
-      caption = caption.replace(/\n[^\n]+\n(\n📍)/, '\n$1')
     if (!refundAddress) caption = caption.replace(/↩️.*\n/g, '')
 
     await deleteSwapMessage(ctx)
-    await ctx.replyWithPhoto({ source: qrBuffer }, { caption, parse_mode: 'Markdown' })
+
+    // The QR is a convenience the server skips on chains it can't encode — the address
+    // and amount in the caption are what actually matter.
+    if (qrDataURL) {
+      const qrBuffer = Buffer.from(qrDataURL.replace(/^data:image\/png;base64,/, ''), 'base64')
+      await ctx.replyWithPhoto({ source: qrBuffer }, { caption, parse_mode: 'Markdown' })
+    } else {
+      await ctx.reply(caption, { parse_mode: 'Markdown' })
+    }
 
     return ctx.scene.leave()
   } catch (error) {

@@ -41,13 +41,19 @@ export const zh: Strings = {
   quoteLine: '{index}. {amount} {ticker} {receiveUsd} • 🕐 {time}',
   quoteError: '💱 兑换\n\n{progress}\n\n❌ 获取报价失败: {error}',
 
+  // --- Receive floor ---
+  // `{minLine}` is built in code (see buildMinLine) and carries its own trailing newline,
+  // so it collapses to nothing when the route has no floor worth showing.
+  minReceiveLine: '最少: {amount} {asset} {usd}',
+  estimateLine: '最少: 不保证 — 最终金额将在您的存款到账时确定',
+
   // --- Swap summary (confirm screen) ---
   swapSummary:
     '📋 兑换摘要\n' +
     '━━━━━━━━━━━━━━━\n' +
     '发送：{sendAmount} {sendAsset} {sendUsd}\n' +
     '接收：{receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    '最少: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '{minLine}\n' +
     '📍 接收地址：{destination}\n' +
     '↩️ 退款地址：{refund}\n' +
     '🔗 提供商：{provider} • {time}\n' +
@@ -61,7 +67,7 @@ export const zh: Strings = {
     '━━━━━━━━━━━━━━━\n' +
     '发送：{sendAmount} {sendAsset} {sendUsd}\n' +
     '接收：{receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    '最少: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '{minLine}\n' +
     '📍 接收地址：{destination}\n' +
     '↩️ 退款地址：{refund}\n' +
     '🔗 提供商：{provider} • {time}\n' +
@@ -71,8 +77,12 @@ export const zh: Strings = {
     '`{sendAmountRaw}` {sendAsset}\n\n' +
     '至地址：\n' +
     '`{inboundAddress}`' +
+    '{attachment}' +
     '{warning}' +
     '{links}',
+  depositAttachment: '\n\n⚠️ {label} — 必填，缺少将导致资金丢失:\n`{value}`',
+  attachmentTag: 'Destination tag',
+  attachmentMemo: 'Memo',
 
   // --- Swap errors ---
   preparingSwap:
@@ -80,14 +90,14 @@ export const zh: Strings = {
     '━━━━━━━━━━━━━━━\n' +
     '发送：{sendAmount} {sendAsset} {sendUsd}\n' +
     '接收：{receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    '最少: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '{minLine}\n' +
     '📍 接收地址：{destination}\n' +
     '↩️ 退款地址：{refund}\n' +
     '🔗 提供商：{provider} • {time}\n' +
     '━━━━━━━━━━━━━━━\n' +
     '⏳ 正在准备兑换...',
   swapFailedNoRoutes: '❌ 兑换失败 — 没有可用路线。',
-  swapNoQr: '❌ 兑换已确认，但未收到二维码。\n请联系客服。',
+  swapNoQr: '❌ 兑换已确认，但未收到存款说明。\n请联系客服。',
   swapConfirmError: '❌ 兑换失败: {error}',
   amlBlocked:
     '⛔ 无法进行此兑换 — 地址 {address} 被第三方合规服务商 (Elliptic) 标记为高风险。请使用其他地址重新发起兑换。',

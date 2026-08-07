@@ -1,6 +1,6 @@
 # uswap-bot
 
-Telegram, SimpleX, and Signal bots for cross-chain swaps via the [swap API](https://swap-api.unstoppable.money/v1).
+Telegram, SimpleX, and Signal bots for cross-chain swaps via the [swap API](https://swap-api.unstoppable.money/v2).
 
 ## Setup
 

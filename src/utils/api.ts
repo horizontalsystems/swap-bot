@@ -1,6 +1,6 @@
-import { QuoteResponse, TokenListItem } from '../types/context'
+import { ProviderError, QuoteRoute, RateResponse, TokenListItem } from '../types/context'
 
-const API_BASE = 'https://swap-api.unstoppable.money/v1'
+const API_BASE = 'https://swap-api.unstoppable.money/v2'
 const SLIPPAGE = 1
 
 function getApiKey(): string {
@@ -9,6 +9,18 @@ function getApiKey(): string {
     throw new Error('SWAP_API_KEY is missing in .env')
   }
   return apiKey
+}
+
+/** A non-2xx response. Carries the parsed body so callers can read the provider error. */
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly body: unknown,
+    message: string
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
 }
 
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -31,74 +43,123 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 
   const responseText = await response.text()
   console.log(`[API] ${options.method || 'GET'} ${endpoint} — ${response.status}`)
+
+  let parsed: unknown
+  let parseFailed = false
   try {
-    console.log(JSON.stringify(JSON.parse(responseText), null, 2))
+    parsed = JSON.parse(responseText)
+    console.log(JSON.stringify(parsed, null, 2))
   } catch {
+    parseFailed = true
     console.log(responseText)
   }
 
   if (!response.ok) {
-    throw new Error(`API error (${response.status}): ${responseText}`)
+    throw new ApiError(response.status, parseFailed ? null : parsed, `API error (${response.status}): ${responseText}`)
   }
 
-  try {
-    return JSON.parse(responseText) as T
-  } catch {
+  if (parseFailed) {
     throw new Error(`Failed to parse API response: ${responseText}`)
   }
+
+  return parsed as T
 }
 
-// --- Quote ---
+/**
+ * Turn a failed commit into something worth showing a user. `/v2/swap` answers with the
+ * provider's own error body — `{ error, provider, errorCode?, minimumAmount?, maximumAmount? }` —
+ * but a fan-out failure wraps it in `providerErrors`, so read either shape.
+ */
+function providerErrorMessage(error: ApiError): string {
+  const body = error.body as (Partial<ProviderError> & { message?: string; providerErrors?: ProviderError[] }) | null
+  const detail = body?.providerErrors?.[0] ?? body
 
-interface QuoteParams {
+  const base = detail?.error ?? (detail as { message?: string } | null)?.message ?? `API error (${error.status})`
+
+  const bounds: string[] = []
+  if (detail?.minimumAmount != null) bounds.push(`min ${detail.minimumAmount}`)
+  if (detail?.maximumAmount != null) bounds.push(`max ${detail.maximumAmount}`)
+
+  return bounds.length ? `${base} (${bounds.join(', ')})` : base
+}
+
+// --- Rate: compare routes (read-only, creates nothing) ---
+
+interface RateParams {
   sellAsset: string
   buyAsset: string
   sellAmount: string
-  destinationAddress?: string
   providers: string[]
-  dry: boolean
+}
+
+export async function fetchRate(params: RateParams): Promise<RateResponse> {
+  const body = {
+    sellAsset: params.sellAsset,
+    buyAsset: params.buyAsset,
+    sellAmount: params.sellAmount,
+    slippage: SLIPPAGE,
+    providers: params.providers
+  }
+
+  console.log('[API] Requesting rate:', JSON.stringify(body, null, 2))
+
+  try {
+    return await apiRequest<RateResponse>('/rate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+  } catch (error) {
+    // 404 means every provider declined — the body still says why, so surface that
+    // as an empty route list rather than a failure.
+    if (error instanceof ApiError && error.status === 404) {
+      const errors = (error.body as { providerErrors?: ProviderError[] } | null)?.providerErrors
+      return { routes: [], providerErrors: Array.isArray(errors) ? errors : [] }
+    }
+    throw error
+  }
+}
+
+// --- Swap: commit with one provider (creates the real order) ---
+
+interface SwapParams {
+  sellAsset: string
+  buyAsset: string
+  sellAmount: string
+  provider: string
+  destinationAddress: string
   refundAddress?: string
 }
 
-export async function fetchQuote(params: QuoteParams): Promise<QuoteResponse> {
+/**
+ * Commits the swap. Unlike `/rate` this returns the executable route **directly** (no
+ * `{ routes }` wrapper), carrying the `execution` block and the `uuid` to track by.
+ */
+export async function fetchSwap(params: SwapParams): Promise<QuoteRoute> {
   const body: Record<string, unknown> = {
     sellAsset: params.sellAsset,
     buyAsset: params.buyAsset,
     sellAmount: params.sellAmount,
     slippage: SLIPPAGE,
-    providers: params.providers,
-    dry: params.dry
-  }
-
-  if (params.destinationAddress) {
-    body.destinationAddress = params.destinationAddress
+    provider: params.provider,
+    destinationAddress: params.destinationAddress
   }
 
   if (params.refundAddress) {
     body.refundAddress = params.refundAddress
   }
 
-  console.log('[API] Requesting quote:', JSON.stringify(body, null, 2))
+  console.log('[API] Requesting swap:', JSON.stringify(body, null, 2))
 
   try {
-    return await apiRequest<QuoteResponse>('/quote', {
+    return await apiRequest<QuoteRoute>('/swap', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     })
   } catch (error) {
-    // 404 means all providers failed — parse provider errors instead of throwing raw response
-    if (error instanceof Error && error.message.includes('API error (404)')) {
-      const jsonStart = error.message.indexOf('{')
-      if (jsonStart !== -1) {
-        try {
-          const parsed = JSON.parse(error.message.slice(jsonStart))
-          const providerErrors = Array.isArray(parsed.providerErrors) ? parsed.providerErrors : []
-          return { routes: [], providerErrors }
-        } catch {
-          /* fall through */
-        }
-      }
+    if (error instanceof ApiError) {
+      throw new Error(providerErrorMessage(error))
     }
     throw error
   }
@@ -113,7 +174,7 @@ export async function fetchAllTokens(): Promise<TokenListItem[]> {
 // --- AML precheck ---
 
 // QUICKEX is the only provider that exposes the AML address precheck
-const AML_PRECHECK_PROVIDERS = ['QUICKEX', 'THORCHAIN']
+const AML_PRECHECK_PROVIDERS = ['QUICKEX']
 
 interface AmlCheckResponse {
   // true = all passed, false = at least one flagged, null = inconclusive
@@ -123,7 +184,7 @@ interface AmlCheckResponse {
 
 export async function checkAddresses(addresses: string[]): Promise<AmlCheckResponse> {
   const query = addresses.map(encodeURIComponent).join(',')
-  return apiRequest<AmlCheckResponse>(`/quote/check-addresses?addresses=${query}`)
+  return apiRequest<AmlCheckResponse>(`/check-addresses?addresses=${query}`)
 }
 
 // Returns the flagged address when the swap must be blocked, otherwise null.

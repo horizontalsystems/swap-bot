@@ -1,6 +1,6 @@
 # USwap-bot
 
-Telegram, SimpleX, and Signal bots for cross-chain swaps via the [swap API](https://swap-api.unstoppable.money/v1).
+Telegram, SimpleX, and Signal bots for cross-chain swaps via the [swap API](https://swap-api.unstoppable.money/v2).
 
 ## Commands
 
@@ -58,9 +58,26 @@ Inserting or removing a step means updating the `go_back` switch, every `selectS
 
 ### Quotes, providers, and the THORChain special case
 
-`utils/api.ts` talks to `https://swap-api.unstoppable.money/v1` with `x-api-key` (`SWAP_API_KEY`). The same
-`/quote` endpoint is called twice: `dry: true` to list routes, `dry: false` on confirm to commit the order.
-A 404 from `/quote` means all providers failed and is converted to `{ routes: [], providerErrors }` rather than thrown.
+`utils/api.ts` talks to the aggregator's **v2** API, `https://swap-api.unstoppable.money/v2`, with `x-api-key`
+(`SWAP_API_KEY`). v2 splits pricing from committing:
+
+- `POST /rate` (`fetchRate`) — read-only fan-out across providers, returns `{ routes, providerErrors }`. A 404
+  means every provider declined and is converted to an empty route list rather than thrown.
+- `POST /swap` (`fetchSwap`) — commits against **one** provider, creates the real order, and returns the
+  executable route **directly** (no `{ routes }` wrapper) with an `execution` block and a `uuid`. Any non-2xx is
+  the provider's own error body; `providerErrorMessage` turns it into the string the user sees.
+
+The route fields that matter downstream: `expectedBuyAmount` is already net of fees (rank on it), `expiresAt` is
+epoch **milliseconds**, and `minBuyAmount` is the enforced floor — **null whenever nothing enforces one**, which
+is every floating-rate P2P quote. `buildMinLine` turns those three states (no floor / equal to expected / a real
+minimum) into the `{minLine}` row, so never present a null as a guarantee.
+
+`execution` is a discriminated union on `method` and is the only place deposit details live. The bot handles
+`transfer` (`depositInstructions`) and `thorchain_deposit` (`thorchainMemo`); `signed_transaction` and
+`stellar_broker` need a wallet to sign with and are excluded by `ALLOWED_PROVIDERS`. A `transfer` may carry an
+`attachment` (XRP destination tag, Cosmos/TON memo) — present ⟺ required, and a deposit missing it is normally
+unrecoverable, so all three scenes surface it separately from the address. `execution.qr` is optional; when the
+server can't encode a chain, the flow continues without the image.
 
 Provider selection: intersection of both assets' `providers` arrays (`getProvidersForPair`), filtered by
 `ALLOWED_PROVIDERS` in `config/assets.ts`. `THORCHAIN` is additionally dropped unless **both** assets are in the
@@ -70,12 +87,12 @@ THORChain routes carry a `memo` that a chat user cannot attach to a transfer, so
 memoless API (`utils/memoless-api.ts`, `https://swap.unstoppable.money/memoless/api/v1`, no API key):
 `register(asset, memo, amount)` → `preflight(asset, reference, amount)` → inbound address, QR, and an **exact**
 send amount that encodes the memo. That is why THORChain confirmations show `amountWarning` — sending a different
-amount breaks the swap. Non-THORChain routes get their QR/inbound address straight from the route.
+amount breaks the swap. Non-THORChain routes get their deposit details from `execution`.
 
 Other provider-conditional behavior: a refund address is required for every provider except THORCHAIN;
-`amlFlaggedAddress()` prechecks destination+refund before committing (only for providers in
-`AML_PRECHECK_PROVIDERS`, and never blocks on an inconclusive result or a service error); `buildTrackUrl()`
-keys the tracking link on deposit address for THORCHAIN/NEAR and on `providerSwapId` for everyone else.
+`amlFlaggedAddress()` prechecks destination+refund before committing via `GET /v2/check-addresses` (only for
+providers in `AML_PRECHECK_PROVIDERS`, and never blocks on an inconclusive result or a service error);
+`buildTrackUrl()` links to the track page keyed on the committed route's `uuid` — no uuid, no link.
 
 ### SQLite is a disposable cache
 
@@ -91,9 +108,10 @@ keyed by `coingeckoId`); a missing price degrades to hiding USD values, never bl
 
 `config/locales/{en,ru,zh,fa}.ts` must all export the **same key set** — `Strings` is typed from `en`, so a
 missing key in another locale is a compile error, and an extra one is silently unused. `t(template, vars)`
-interpolates `{name}` placeholders. Several messages are post-processed with regex (dropping the min-receive line
-when it equals the expected amount, dropping the refund line when there is no refund address); if you reword
-those templates, check the regexes in `showSummary`/`confirm_swap` and their SimpleX/Signal equivalents.
+interpolates `{name}` placeholders. Two slots in the summary templates are built in code rather than filled with
+a value: `{minLine}` (from `buildMinLine`, carrying its own trailing newline so an absent row collapses) and
+`{attachment}`. The refund row is still dropped by a regex post-pass (`/↩️.*\n/g`) when there is no refund
+address — reword that line and the regex needs checking in `showSummary`/`confirm_swap` and both chat equivalents.
 
 ### Address validation
 

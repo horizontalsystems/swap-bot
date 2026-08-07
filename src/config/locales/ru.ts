@@ -47,13 +47,19 @@ export const ru: Strings = {
   quoteLine: '{index}. {amount} {ticker} {receiveUsd} • 🕐 {time}',
   quoteError: '💱 Обмен\n\n{progress}\n\n❌ Ошибка получения котировки: {error}',
 
+  // --- Receive floor ---
+  // `{minLine}` is built in code (see buildMinLine) and carries its own trailing newline,
+  // so it collapses to nothing when the route has no floor worth showing.
+  minReceiveLine: 'Мин: {amount} {asset} {usd}',
+  estimateLine: 'Мин: Без гарантии — итоговая сумма определится при поступлении депозита',
+
   // --- Swap summary (confirm screen) ---
   swapSummary:
     '📋 Итого по обмену\n' +
     '━━━━━━━━━━━━━━━\n' +
     'Отправка: {sendAmount} {sendAsset} {sendUsd}\n' +
     'Получение: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    'Мин: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '{minLine}\n' +
     '📍 Назначение: {destination}\n' +
     '↩️ Возврат: {refund}\n' +
     '🔗 Провайдер: {provider} • {time}\n' +
@@ -67,7 +73,7 @@ export const ru: Strings = {
     '━━━━━━━━━━━━━━━\n' +
     'Отправка: {sendAmount} {sendAsset} {sendUsd}\n' +
     'Получение: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    'Мин: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '{minLine}\n' +
     '📍 Назначение: {destination}\n' +
     '↩️ Возврат: {refund}\n' +
     '🔗 Провайдер: {provider} • {time}\n' +
@@ -77,8 +83,12 @@ export const ru: Strings = {
     '`{sendAmountRaw}` {sendAsset}\n\n' +
     'На адрес:\n' +
     '`{inboundAddress}`' +
+    '{attachment}' +
     '{warning}' +
     '{links}',
+  depositAttachment: '\n\n⚠️ {label} — обязательно, без него средства будут потеряны:\n`{value}`',
+  attachmentTag: 'Destination tag',
+  attachmentMemo: 'Memo',
 
   // --- Swap errors ---
   preparingSwap:
@@ -86,14 +96,14 @@ export const ru: Strings = {
     '━━━━━━━━━━━━━━━\n' +
     'Отправка: {sendAmount} {sendAsset} {sendUsd}\n' +
     'Получение: {receiveAmount} {receiveAsset} {receiveUsd}\n' +
-    'Мин: {minReceive} {receiveAsset} {minReceiveUsd}\n\n' +
+    '{minLine}\n' +
     '📍 Назначение: {destination}\n' +
     '↩️ Возврат: {refund}\n' +
     '🔗 Провайдер: {provider} • {time}\n' +
     '━━━━━━━━━━━━━━━\n' +
     '⏳ Подготовка обмена...',
   swapFailedNoRoutes: '❌ Обмен не удался — нет доступных маршрутов.',
-  swapNoQr: '❌ Обмен подтверждён, но QR-код не получен.\nОбратитесь в поддержку.',
+  swapNoQr: '❌ Обмен подтверждён, но инструкции для депозита не получены.\nОбратитесь в поддержку.',
   swapConfirmError: '❌ Ошибка обмена: {error}',
   amlBlocked:
     '⛔ Обмен невозможен — адрес {address} помечен как высокорисковый сторонним провайдером комплаенса (Elliptic). Пожалуйста, начните новый обмен с другим адресом.',
