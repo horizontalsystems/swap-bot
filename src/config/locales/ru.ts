@@ -47,6 +47,19 @@ export const ru: Strings = {
   quoteLine: '{index}. {amount} {ticker} {receiveUsd} • 🕐 {time}',
   quoteError: '💱 Обмен\n\n{progress}\n\n❌ Ошибка получения котировки: {error}',
 
+  // --- Zcash address families ---
+  zecAddressNote:
+    'ℹ️ ZEC: маршруты помечены типом адреса, на который они выводят — прозрачный (t1…/t3…) или экранированный (zs1…/u1…). Выберите тот, что подходит вашему кошельку.',
+  zecRouteTransparent: 'прозрачный t1/t3',
+  zecRouteShielded: 'экранированный zs1/u1',
+  zecNeedsTransparent:
+    '⚠️ {provider} выводит только на прозрачные ZEC-адреса (t1…/t3…).\n' +
+    'Введите прозрачный адрес или вернитесь назад и выберите экранированный маршрут.',
+  zecNeedsShielded:
+    '⚠️ {provider} выводит на экранированные ZEC-адреса (zs1…/u1…).\n' +
+    'Введите экранированный адрес или вернитесь назад и выберите прозрачный маршрут.',
+  chooseAnotherProvider: '👉 Выберите другого провайдера и повторите.',
+
   // --- Receive floor ---
   // `{minLine}` is built in code (see buildMinLine) and carries its own trailing newline,
   // so it collapses to nothing when the route has no floor worth showing.

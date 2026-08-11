@@ -6,7 +6,7 @@ import { s, t } from '../../config/strings'
 import { getAssets, getProvidersForPair, searchAssets } from '../../db/tokens'
 import { Asset, Attachment, QuoteRoute, SwapSessionData } from '../../types/context'
 import { getAssetPrice, getSwapPrices } from '../../services/prices'
-import { amlFlaggedAddress, fetchRate, fetchSwap } from '../../utils/api'
+import { amlFlaggedAddress, fetchSwap } from '../../utils/api'
 import { preflightMemoless, registerMemoless } from '../../utils/memoless-api'
 import { validateAddress } from '../../utils/addressValidator'
 import { SignalRpcClient } from '../../utils/signal-rpc'
@@ -14,18 +14,25 @@ import {
   AmountFormatter,
   assetCaption,
   attachmentLabel,
+  buyAssetForRoute,
   buildMinLine,
   buildProgress,
   buildTrackUrl,
   depositInstructions,
   expiresInSeconds,
+  fetchPairRates,
   formatAmount,
   formatTime,
   formatUsd,
+  isZecIdentifier,
   providerName,
   shortenAddress,
   thorchainMemo,
-  truncateToDecimals
+  truncateToDecimals,
+  zecAddressMismatch,
+  zecRefundMismatch,
+  zecRouteTag,
+  zecShieldedProviders
 } from './helpers'
 
 const S = s('en')
@@ -262,14 +269,16 @@ async function fetchAndShowRoutes(
     ALLOWED_PROVIDERS.includes(p)
   )
 
-  if (providers.length === 0) {
+  // Receiving ZEC also pulls in the shielded catalog's providers, which sit outside the
+  // pair's own provider list.
+  if (providers.length === 0 && zecShieldedProviders(assetOut!.identifier).length === 0) {
     await send(client, recipient, t(S.noProviders, { progress: prog }))
     return false
   }
 
   await send(client, recipient, t(S.fetchingQuotes, { progress: prog }))
 
-  const quoteResponse = await fetchRate({
+  const quoteResponse = await fetchPairRates({
     sellAsset: assetIn!.identifier,
     buyAsset: assetOut!.identifier,
     sellAmount: amount!.toString(),
@@ -291,12 +300,18 @@ async function fetchAndShowRoutes(
 
   const numEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']
 
+  // Two ZEC routes can differ only in the address family they pay out to — say which
+  const zecTag = (route: QuoteRoute) => {
+    const tag = zecRouteTag(S, route)
+    return tag ? ` · ${tag}` : ''
+  }
+
   const routeLines = quoteResponse.routes.map((route, i) => {
     const receiveUsdVal = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmount) : null
     const num = numEmojis[i] ?? `${i + 1}.`
     return (
       `${num} ${amt(route.expectedBuyAmount, assetOut!.decimals)} ${code(assetOut!.ticker)} ${formatUsd(receiveUsdVal)}\n` +
-      `🕐 ${formatTime(route.estimatedTime.total)}, ${signalProviderLabel(route.providers[0])}`
+      `🕐 ${formatTime(route.estimatedTime.total)}, ${signalProviderLabel(route.providers[0])}${zecTag(route)}`
     )
   })
 
@@ -307,6 +322,8 @@ async function fetchAndShowRoutes(
     prog +
       `\n\n${count} quote${count > 1 ? 's' : ''} available 👇\n\n` +
       routeLines.join('\n\n') +
+      // Receiving ZEC: the address family decides which of these routes can pay out at all
+      (isZecIdentifier(assetOut!.identifier) ? `\n\n${S.zecAddressNote}` : '') +
       `\n\n${count === 1 ? '1 = select route' : `1-${count} = select route`}\n` +
       hint('b', 'c').trimStart()
   )
@@ -395,7 +412,7 @@ async function handleSelectRecvAsset(
     session.menuItems = undefined
     if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
 
-    if (providers.length === 0) {
+    if (providers.length === 0 && zecShieldedProviders(asset.identifier).length === 0) {
       await send(client, recipient, t(S.noProviders, { progress: progress(session) }) + hint('b', 'c'))
       // Stay at ENTER_AMOUNT so "b" returns to SELECT_RECV_ASSET
       session.step = SwapStep.ENTER_AMOUNT
@@ -505,9 +522,27 @@ async function handleEnterDestination(
     return
   }
 
+  // The route was quoted against one Zcash catalog entry and can only pay that address
+  // family — catch a mismatch here instead of letting the provider reject the committed
+  // order with a bare "invalid address".
+  const provider = session.quote!.providers[0]
+  const zecMismatch = zecAddressMismatch(session.quote!, input)
+  if (zecMismatch) {
+    await send(
+      client,
+      recipient,
+      t(S.enterDestination, { progress: progress(session), asset }) +
+        `\n\n${t(zecMismatch === 'transparent' ? S.zecNeedsTransparent : S.zecNeedsShielded, {
+          provider: providerName(provider)
+        })}` +
+        hint('b', 'c')
+    )
+    return
+  }
+
   session.destinationAddress = input
 
-  const isThorChain = session.quote!.providers[0] === 'THORCHAIN'
+  const isThorChain = provider === 'THORCHAIN'
   if (isThorChain) {
     session.step = SwapStep.CONFIRM
     await showSummary(client, recipient, session)
@@ -528,6 +563,20 @@ async function handleEnterRefund(
   const refundError = validateAddress(session.assetIn!.identifier, input)
   if (refundError) {
     await send(client, recipient, t(S.invalidRefund, { progress: progress(session), asset, hint: refundError }))
+    return
+  }
+
+  // Refunds go out the same way payouts do — a provider that can't send to a shielded
+  // ZEC address can't refund to one either.
+  const refundProvider = session.quote!.providers[0]
+  if (zecRefundMismatch(session.assetIn!.identifier, input, refundProvider)) {
+    await send(
+      client,
+      recipient,
+      t(S.enterRefund, { progress: progress(session), asset }) +
+        `\n\n${t(S.zecNeedsTransparent, { provider: providerName(refundProvider) })}` +
+        hint('b', 'c')
+    )
     return
   }
 
@@ -594,7 +643,8 @@ async function executeSwap(client: SignalRpcClient, recipient: string, session: 
   try {
     const swapParams: Parameters<typeof fetchSwap>[0] = {
       sellAsset: assetIn.identifier,
-      buyAsset: assetOut.identifier,
+      // A shielded route buys a different Zcash catalog entry than the asset the user picked
+      buyAsset: buyAssetForRoute(quote, assetOut),
       sellAmount: amount.toString(),
       destinationAddress,
       provider: quote.providers[0]
@@ -680,7 +730,7 @@ async function executeSwap(client: SignalRpcClient, recipient: string, session: 
       chainId: assetIn.chainId,
       fromAsset: assetIn.identifier,
       fromAmount: sendAmount.toString(),
-      toAsset: assetOut.identifier,
+      toAsset: buyAssetForRoute(route, assetOut),
       toAmount: route.expectedBuyAmount,
       toAddress: destinationAddress,
       refundAddress
@@ -724,7 +774,22 @@ async function executeSwap(client: SignalRpcClient, recipient: string, session: 
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error'
     console.error('[Swap] Confirm error:', error)
-    await send(client, recipient, t(S.swapConfirmError, { error: errMsg }))
+    await send(client, recipient, t(S.swapConfirmError, { error: errMsg }) + `\n\n${S.chooseAnotherProvider}`)
+
+    // The commit goes to one provider, and a refusal is usually that provider's alone — a
+    // shielded ZEC destination is the common case. Re-quote and hand the list back rather
+    // than dropping the session and making the user rebuild the swap from scratch.
+    session.quote = undefined
+    session.destinationAddress = undefined
+    session.refundAddress = undefined
+    try {
+      if (await fetchAndShowRoutes(client, recipient, session)) {
+        session.step = SwapStep.SELECT_ROUTE
+        return
+      }
+    } catch (requoteError) {
+      console.error('[Swap] Re-quote after a failed commit failed:', requoteError)
+    }
     sessions.delete(recipient)
   }
 }

@@ -5,12 +5,13 @@ import { s, t } from '../../config/strings'
 import { getAssetByIdentifier, getAssets, getProvidersForPair, searchAssets } from '../../db/tokens'
 import { SwapContext } from '../../types/context'
 import { getAssetPrice, getSwapPrices } from '../../services/prices'
-import { amlFlaggedAddress, fetchRate, fetchSwap } from '../../utils/api'
+import { amlFlaggedAddress, fetchSwap } from '../../utils/api'
 import { preflightMemoless, registerMemoless } from '../../utils/memoless-api'
 import { validateAddress } from '../../utils/addressValidator'
 import {
   AmountFormatter,
   assetCaption,
+  buyAssetForRoute,
   assetKeyboard,
   attachmentLabel,
   backCancelRow,
@@ -23,15 +24,21 @@ import {
   depositInstructions,
   editSwapMessage,
   expiresInSeconds,
+  fetchPairRates,
   formatAmount,
   formatTime,
   formatUsd,
+  isZecIdentifier,
   providerLabel,
   providerName,
   searchResultsKeyboard,
   shortenAddress,
   thorchainMemo,
-  truncateToDecimals
+  truncateToDecimals,
+  zecAddressMismatch,
+  zecRefundMismatch,
+  zecRouteTag,
+  zecShieldedProviders
 } from './helpers'
 
 // Telegram renders amounts inline, without the copy-friendly backticks the
@@ -86,14 +93,16 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
     ALLOWED_PROVIDERS.includes(p)
   )
 
-  if (providers.length === 0) {
+  // Receiving ZEC also pulls in the shielded catalog's providers, which sit outside the
+  // pair's own provider list.
+  if (providers.length === 0 && zecShieldedProviders(assetOut!.identifier).length === 0) {
     await editSwapMessage(ctx, t(S.noProviders, { progress }))
     return false
   }
 
   await editSwapMessage(ctx, t(S.fetchingQuotes, { progress }))
 
-  const quoteResponse = await fetchRate({
+  const quoteResponse = await fetchPairRates({
     sellAsset: assetIn!.identifier,
     buyAsset: assetOut!.identifier,
     sellAmount: amount!.toString(),
@@ -119,26 +128,37 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
 
   const routeLines = quoteResponse.routes.map((route, i) => {
     const receiveUsdVal = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmount) : null
-    return t(S.quoteLine, {
-      index: i + 1,
-      provider: providerName(route.providers[0]),
-      amount: formatAmount(route.expectedBuyAmount, assetOut!.decimals),
-      ticker: assetOut!.ticker,
-      receiveUsd: formatUsd(receiveUsdVal),
-      time: formatTime(route.estimatedTime.total)
-    })
+    const tag = zecRouteTag(S, route)
+    return (
+      t(S.quoteLine, {
+        index: i + 1,
+        provider: providerName(route.providers[0]),
+        amount: formatAmount(route.expectedBuyAmount, assetOut!.decimals),
+        ticker: assetOut!.ticker,
+        receiveUsd: formatUsd(receiveUsdVal),
+        time: formatTime(route.estimatedTime.total)
+      }) + (tag ? ` • ${tag}` : '')
+    )
   })
 
-  const routeButtons = quoteResponse.routes.map((route, i) =>
-    Markup.button.callback(`${i + 1}. ${providerLabel(route.providers[0])}`, `route_${i}`)
-  )
+  const routeButtons = quoteResponse.routes.map((route, i) => {
+    const tag = zecRouteTag(S, route)
+    return Markup.button.callback(
+      `${i + 1}. ${providerLabel(route.providers[0])}${tag ? ` · ${tag}` : ''}`,
+      `route_${i}`
+    )
+  })
 
   const buttonRows = routeButtons.map(btn => [btn])
   buttonRows.push(backCancelRow(S))
 
+  // Receiving ZEC: the address family decides which of these routes can actually pay out,
+  // so say it before the user picks one.
+  const zecNote = isZecIdentifier(assetOut!.identifier) ? `\n\n${S.zecAddressNote}` : ''
+
   await editSwapMessage(
     ctx,
-    t(S.quotesHeader, { progress, count: quoteResponse.routes.length, routes: routeLines.join('\n') }),
+    t(S.quotesHeader, { progress, count: quoteResponse.routes.length, routes: routeLines.join('\n') }) + zecNote,
     { ...Markup.inlineKeyboard(buttonRows) }
   )
 
@@ -345,9 +365,25 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
       return
     }
 
+    // The route was quoted against one Zcash catalog entry and can only pay that address
+    // family — catch a mismatch here instead of letting the provider reject the committed
+    // order with a bare "invalid address".
+    const provider = ctx.scene.session.quote!.providers[0]
+    const zecMismatch = zecAddressMismatch(ctx.scene.session.quote!, address)
+    if (zecMismatch) {
+      const progress = buildProgress(ctx.scene.session, S)
+      const reason = zecMismatch === 'transparent' ? S.zecNeedsTransparent : S.zecNeedsShielded
+      await editSwapMessage(
+        ctx,
+        t(S.enterDestination, { progress, asset }) + `\n\n${t(reason, { provider: providerName(provider) })}`,
+        { ...Markup.inlineKeyboard([backCancelRow(S)]) }
+      )
+      return
+    }
+
     ctx.scene.session.destinationAddress = address
 
-    const isThorChain = ctx.scene.session.quote!.providers[0] === 'THORCHAIN'
+    const isThorChain = provider === 'THORCHAIN'
     if (isThorChain) {
       await showSummary(ctx)
       ctx.wizard.selectStep(7)
@@ -380,6 +416,20 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
       await editSwapMessage(ctx, t(S.invalidRefund, { progress, asset: inAsset, hint: refundError }), {
         ...Markup.inlineKeyboard([backCancelRow(S)])
       })
+      return
+    }
+
+    // Refunds go out the same way payouts do — a provider that can't send to a shielded
+    // ZEC address can't refund to one either.
+    const refundProvider = ctx.scene.session.quote!.providers[0]
+    if (zecRefundMismatch(ctx.scene.session.assetIn!.identifier, refundAddress, refundProvider)) {
+      const progress = buildProgress(ctx.scene.session, S)
+      await editSwapMessage(
+        ctx,
+        t(S.enterRefund, { progress, asset: inAsset }) +
+          `\n\n${t(S.zecNeedsTransparent, { provider: providerName(refundProvider) })}`,
+        { ...Markup.inlineKeyboard([backCancelRow(S)]) }
+      )
       return
     }
 
@@ -456,7 +506,7 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
     ctx.scene.session.assetOut = asset
     if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
 
-    if (providers.length === 0) {
+    if (providers.length === 0 && zecShieldedProviders(asset.identifier).length === 0) {
       await ctx.answerCbQuery()
       const progress = buildProgress(ctx.scene.session, S)
       await ctx.editMessageText(t(S.noProviders, { progress }), {
@@ -515,7 +565,7 @@ swapWizard.action(/^sselect_(\d+)$/, async ctx => {
     ctx.scene.session.searchResults = undefined
     if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
 
-    if (providers.length === 0) {
+    if (providers.length === 0 && zecShieldedProviders(asset.identifier).length === 0) {
       await ctx.answerCbQuery()
       const progress = buildProgress(ctx.scene.session, S)
       await ctx.editMessageText(t(S.noProviders, { progress }), {
@@ -607,7 +657,8 @@ swapWizard.action('confirm_swap', async ctx => {
   try {
     const swapParams: Parameters<typeof fetchSwap>[0] = {
       sellAsset: assetIn.identifier,
-      buyAsset: assetOut.identifier,
+      // A shielded route buys a different Zcash catalog entry than the asset the user picked
+      buyAsset: buyAssetForRoute(quote, assetOut),
       sellAmount: amount.toString(),
       destinationAddress,
       provider: quote.providers[0]
@@ -700,7 +751,7 @@ swapWizard.action('confirm_swap', async ctx => {
       chainId: assetIn.chainId,
       fromAsset: assetIn.identifier,
       fromAmount: sendAmount.toString(),
-      toAsset: assetOut.identifier,
+      toAsset: buyAssetForRoute(route, assetOut),
       toAmount: route.expectedBuyAmount,
       toAddress: destinationAddress,
       refundAddress: refundAddress
@@ -743,6 +794,31 @@ swapWizard.action('confirm_swap', async ctx => {
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error'
     console.error('[Swap] Confirm error:', error)
+
+    // The commit is against one provider, and a refusal is usually that provider's alone —
+    // a shielded ZEC destination is the common case. Hand the quote list back instead of
+    // dropping the user out of the wizard to rebuild the swap from scratch.
+    const routes = ctx.scene.session.routes
+    if (routes?.length) {
+      ctx.scene.session.quote = undefined
+      ctx.scene.session.destinationAddress = undefined
+      ctx.scene.session.refundAddress = undefined
+      const buttonRows = routes.map((route, i) => [
+        Markup.button.callback(`${i + 1}. ${providerLabel(route.providers[0])}`, `route_${i}`)
+      ])
+      buttonRows.push(backCancelRow(S))
+
+      const text = `${t(S.swapConfirmError, { error: errMsg })}\n\n${S.chooseAnotherProvider}`
+      try {
+        await ctx.editMessageText(text, { ...Markup.inlineKeyboard(buttonRows) })
+      } catch {
+        const msg = await ctx.reply(text, { ...Markup.inlineKeyboard(buttonRows) })
+        ctx.scene.session.swapMessageId = msg.message_id
+      }
+      ctx.wizard.selectStep(4)
+      return
+    }
+
     try {
       await ctx.editMessageText(t(S.swapConfirmError, { error: errMsg }))
     } catch {

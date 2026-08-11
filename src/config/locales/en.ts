@@ -46,6 +46,21 @@ export const en = {
   quoteLine: '{index}. {amount} {ticker} {receiveUsd} • 🕐 {time}',
   quoteError: '💱 Swap\n\n{progress}\n\n❌ Failed to fetch quote: {error}',
 
+  // --- Zcash address families ---
+  // Zcash is quoted as two tokens: ZEC.ZEC pays transparent addresses, ZEC.ZECSHIELDED
+  // pays shielded ones. Routes from both show in one list, tagged with what they can pay.
+  zecAddressNote:
+    'ℹ️ ZEC: routes are tagged by the address family they pay out to — transparent (t1…/t3…) or shielded (zs1…/u1…). Pick the one that matches your wallet.',
+  zecRouteTransparent: 'transparent t1/t3',
+  zecRouteShielded: 'shielded zs1/u1',
+  zecNeedsTransparent:
+    '⚠️ {provider} pays out to transparent ZEC addresses only (t1…/t3…).\n' +
+    'Enter a transparent address, or go back and pick a shielded route.',
+  zecNeedsShielded:
+    '⚠️ {provider} pays out to shielded ZEC addresses (zs1…/u1…).\n' +
+    'Enter a shielded address, or go back and pick a transparent route.',
+  chooseAnotherProvider: '👉 Pick another provider and try again.',
+
   // --- Receive floor ---
   // `{minLine}` is built in code (see buildMinLine) and carries its own trailing newline,
   // so it collapses to nothing when the route has no floor worth showing.

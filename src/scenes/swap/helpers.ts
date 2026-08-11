@@ -1,6 +1,14 @@
 import { Markup } from 'telegraf'
 import { Strings, t } from '../../config/strings'
-import { Asset, Attachment, QuoteRoute, SwapContext, SwapSessionData } from '../../types/context'
+import {
+  ALLOWED_PROVIDERS,
+  ZEC_SHIELDED_IDENTIFIER,
+  ZEC_SHIELDED_PROVIDERS,
+  ZEC_TRANSPARENT_IDENTIFIER
+} from '../../config/assets'
+import { Asset, Attachment, QuoteRoute, RateResponse, SwapContext, SwapSessionData } from '../../types/context'
+import { zecAddressKind } from '../../utils/addressValidator'
+import { fetchRate } from '../../utils/api'
 
 export function cancelButtonRow(S: Strings) {
   return [Markup.button.callback(S.cancelSwap, 'cancel_swap')]
@@ -44,6 +52,105 @@ export function providerLabel(id: string): string {
   const name = providerTitles[id] ?? id
   const risk = providerRisk[id]
   return risk ? `${name} · ${risk}` : name
+}
+
+// --- Zcash: shielded vs transparent ---
+
+export function isZecIdentifier(identifier: string | undefined): boolean {
+  return identifier?.split('.')[0] === 'ZEC'
+}
+
+/** Shielded-capable providers that are actually offerable — the rest of the list is documentation. */
+export function zecShieldedProviders(buyAssetIdentifier: string): string[] {
+  if (buyAssetIdentifier !== ZEC_TRANSPARENT_IDENTIFIER) return []
+  return ZEC_SHIELDED_PROVIDERS.filter(p => ALLOWED_PROVIDERS.includes(p))
+}
+
+/**
+ * Rates for the pair. Receiving ZEC quotes both Zcash catalog entries — `ZEC.ZEC` from the
+ * providers that pay transparent addresses, `ZEC.ZECSHIELDED` from the ones that pay
+ * shielded — and merges them into one list, so the user compares every route that can
+ * actually deliver. Each route carries the identifier it was quoted for in `buyAsset`,
+ * which is what the commit and the address check key on afterwards.
+ *
+ * The shielded catalog is a separate token that a provider (or the aggregator) may not
+ * know: that leg failing must never take the transparent quotes down with it.
+ */
+export async function fetchPairRates(params: {
+  sellAsset: string
+  buyAsset: string
+  sellAmount: string
+  providers: string[]
+}): Promise<RateResponse> {
+  const shielded = zecShieldedProviders(params.buyAsset)
+  if (shielded.length === 0) return fetchRate(params)
+
+  const [transparentRates, shieldedRates] = await Promise.all([
+    params.providers.length > 0 ? fetchRate(params) : Promise.resolve(emptyRateResponse()),
+    fetchRate({ ...params, buyAsset: ZEC_SHIELDED_IDENTIFIER, providers: shielded }).catch(error => {
+      console.error('[Swap] Shielded ZEC quote failed:', error)
+      return emptyRateResponse()
+    })
+  ])
+
+  // Pin the identifier we asked for onto each route: everything downstream reads the
+  // address family off it, so it must not depend on what the provider echoes back.
+  for (const route of shieldedRates.routes) route.buyAsset = ZEC_SHIELDED_IDENTIFIER
+  for (const route of transparentRates.routes) route.buyAsset = params.buyAsset
+
+  return {
+    routes: [...transparentRates.routes, ...shieldedRates.routes],
+    providerErrors: [...transparentRates.providerErrors, ...shieldedRates.providerErrors]
+  }
+}
+
+function emptyRateResponse(): RateResponse {
+  return { routes: [], providerErrors: [] }
+}
+
+export type ZecFamily = 'transparent' | 'shielded'
+
+/** Which Zcash address family a quoted route can pay out to, or null when ZEC isn't involved. */
+export function zecRouteFamily(route: QuoteRoute): ZecFamily | null {
+  if (!isZecIdentifier(route.buyAsset)) return null
+  return route.buyAsset === ZEC_SHIELDED_IDENTIFIER ? 'shielded' : 'transparent'
+}
+
+/**
+ * The family a route needs when the address the user typed isn't one it can pay — null
+ * when the address fits. Unified (`u1…`) counts as shielded: the exchanges that reject
+ * `zs1…` reject it too, having never learned to read its transparent receiver.
+ */
+export function zecAddressMismatch(route: QuoteRoute, address: string): ZecFamily | null {
+  const family = zecRouteFamily(route)
+  if (!family) return null
+
+  const kind = zecAddressKind(address)
+  const matches = family === 'transparent' ? kind === 'transparent' : kind === 'shielded' || kind === 'unified'
+  return matches ? null : family
+}
+
+/**
+ * Refunds leave a provider the same way payouts do, so a ZEC refund address is bound by
+ * the provider rather than by the route's buy side. Returns the family the user has to
+ * switch to, or null when the address is fine.
+ */
+export function zecRefundMismatch(identifier: string, address: string, provider: string): ZecFamily | null {
+  if (!isZecIdentifier(identifier)) return null
+  if (zecAddressKind(address) === 'transparent') return null
+  return ZEC_SHIELDED_PROVIDERS.includes(provider) ? null : 'transparent'
+}
+
+/** The tag that tells two ZEC routes apart in the quote list. */
+export function zecRouteTag(S: Strings, route: QuoteRoute): string {
+  const family = zecRouteFamily(route)
+  if (!family) return ''
+  return family === 'shielded' ? S.zecRouteShielded : S.zecRouteTransparent
+}
+
+/** What a committed swap must buy: the route's own identifier, not the asset the user picked. */
+export function buyAssetForRoute(route: QuoteRoute, assetOut: Asset): string {
+  return route.buyAsset || assetOut.identifier
 }
 
 const chainLabels: Record<string, string> = {

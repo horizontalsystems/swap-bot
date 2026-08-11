@@ -120,20 +120,39 @@ function validateBch(address: string): boolean {
   return cashAddrRegex.test(address.toLowerCase())
 }
 
-function validateZec(address: string): boolean {
-  // Transparent t-addresses (base58check, 2-byte version: t1 = 0x1CB8, t3 = 0x1CBD)
+/**
+ * Zcash address families. The distinction leaves the chain: an exchange has to be able to
+ * *pay out* to the family the user typed, and most only handle transparent addresses — so
+ * the kind decides which providers can serve the swap (see ZEC_SHIELDED_PAYOUT).
+ *   transparent — t1 (P2PKH) / t3 (P2SH), base58check with a 2-byte version (0x1CB8/0x1CBD)
+ *   shielded    — Sapling zs1…, bech32 with the `zs` prefix
+ *   unified     — u1…, bech32m with the `u` prefix; may wrap a transparent receiver, but
+ *                 exchanges generally never learned to unwrap one
+ * Sprout (zc…) is deliberately absent — the pool is deprecated and nothing pays out to it.
+ */
+export type ZecAddressKind = 'transparent' | 'shielded' | 'unified'
+
+export function zecAddressKind(address: string): ZecAddressKind | null {
   if (address.startsWith('t1') || address.startsWith('t3')) {
     try {
       const decoded = bs58check.decode(address)
-      if (decoded.length === 22) return true
+      if (decoded.length === 22) return 'transparent'
     } catch {}
+    return null
   }
-  // Unified addresses (bech32m u1...)
+  try {
+    const decoded = bech32.decode(address, 512)
+    if (decoded.prefix === 'zs' && decoded.words.length > 0) return 'shielded'
+  } catch {}
   try {
     const decoded = bech32m.decode(address, 512)
-    if (decoded.prefix === 'u' && decoded.words.length > 0) return true
+    if (decoded.prefix === 'u' && decoded.words.length > 0) return 'unified'
   } catch {}
-  return false
+  return null
+}
+
+function validateZec(address: string): boolean {
+  return zecAddressKind(address) !== null
 }
 
 function validateXec(address: string): boolean {
@@ -280,7 +299,7 @@ const HINTS: Record<string, string> = {
   DOGE: 'must start with D or 9',
   DASH: 'must start with X or 7',
   BCH: 'must be a valid Bitcoin Cash address',
-  ZEC: 'must start with t1, t3, or u1',
+  ZEC: 'must start with t1 or t3 (transparent), zs1 (shielded), or u1 (unified)',
   XEC: 'must be a valid eCash address',
   XRP: 'must start with r or X',
   XLM: 'must start with G and be 56 characters',

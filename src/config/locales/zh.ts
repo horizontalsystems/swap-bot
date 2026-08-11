@@ -41,6 +41,16 @@ export const zh: Strings = {
   quoteLine: '{index}. {amount} {ticker} {receiveUsd} • 🕐 {time}',
   quoteError: '💱 兑换\n\n{progress}\n\n❌ 获取报价失败: {error}',
 
+  // --- Zcash address families ---
+  zecAddressNote:
+    'ℹ️ ZEC: 每条路线都标注了可提现的地址类型 — 透明地址 (t1…/t3…) 或屏蔽地址 (zs1…/u1…)。请选择与您钱包匹配的路线。',
+  zecRouteTransparent: '透明 t1/t3',
+  zecRouteShielded: '屏蔽 zs1/u1',
+  zecNeedsTransparent:
+    '⚠️ {provider} 只能提现到透明 ZEC 地址 (t1…/t3…)。\n' + '请输入透明地址，或返回上一步选择屏蔽路线。',
+  zecNeedsShielded: '⚠️ {provider} 提现到屏蔽 ZEC 地址 (zs1…/u1…)。\n' + '请输入屏蔽地址，或返回上一步选择透明路线。',
+  chooseAnotherProvider: '👉 请选择其他提供商重试。',
+
   // --- Receive floor ---
   // `{minLine}` is built in code (see buildMinLine) and carries its own trailing newline,
   // so it collapses to nothing when the route has no floor worth showing.

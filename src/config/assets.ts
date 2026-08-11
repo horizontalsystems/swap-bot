@@ -24,6 +24,24 @@ export const ALLOWED_PROVIDERS: string[] = [
   'PEGASUS'
 ]
 
+/**
+ * Zcash is two payout targets, not one. Every other provider can only send to a
+ * transparent `t1/t3` address and rejects a shielded `zs1…` / unified `u1…` one — as a
+ * bare "invalid address" at commit time, after the user has typed it.
+ *
+ * The aggregator models this as two tokens: `ZEC.ZEC` is the transparent catalog entry,
+ * `ZEC.ZECSHIELDED` the shielded one, quoted from the providers below. So a ZEC swap
+ * quotes both identifiers and the route the user picks decides which address family the
+ * bot will accept — see `fetchPairRates` / `zecRouteFamily` in scenes/swap/helpers.ts.
+ *
+ * MAYACHAIN stays listed as a fact about the pair even though `ALLOWED_PROVIDERS` filters
+ * it out: it executes via `thorchain_deposit`, so it needs the memoless flow (which today
+ * only knows THORCHAIN) before it can be offered here.
+ */
+export const ZEC_TRANSPARENT_IDENTIFIER = 'ZEC.ZEC'
+export const ZEC_SHIELDED_IDENTIFIER = 'ZEC.ZECSHIELDED'
+export const ZEC_SHIELDED_PROVIDERS: string[] = ['EXOLIX', 'MAYACHAIN']
+
 export const FEATURED_IDENTIFIERS: string[] = [
   'BTC.BTC',
   'ETH.ETH',

@@ -94,6 +94,9 @@ Other provider-conditional behavior: a refund address is required for every prov
 providers in `AML_PRECHECK_PROVIDERS`, and never blocks on an inconclusive result or a service error);
 `buildTrackUrl()` links to the track page keyed on the committed route's `uuid` — no uuid, no link.
 
+A commit that fails does **not** end the flow: every scene re-quotes and hands the route list back (Telegram
+returns to wizard step 4), because a refusal is usually the one committed provider's, not the pair's.
+
 ### SQLite is a disposable cache
 
 `db/database.ts` **drops and recreates `tokens` and `memoless_assets` on every `getDb()` init** — the DB holds
@@ -118,3 +121,20 @@ address — reword that line and the regex needs checking in `showSummary`/`conf
 `utils/addressValidator.ts` maps the chain prefix of an identifier (`BTC.BTC` → `BTC`) to a per-chain validator
 and returns a human-readable hint string on failure, `null` on success. Unknown chains fall through to a
 length-only check, so adding a chain to `FEATURED_IDENTIFIERS` without a validator silently accepts junk addresses.
+
+Zcash is the one chain where a *valid* address can still be unswappable: `zecAddressKind()` splits it into
+transparent (`t1`/`t3`), shielded Sapling (`zs1`), and unified (`u1`), and most exchanges only pay out to
+transparent — they reject the rest at commit time with a bare "invalid address".
+
+The aggregator models this as **two tokens**: `ZEC.ZEC` (transparent, quoted from the pair's own provider list)
+and `ZEC.ZECSHIELDED` (shielded, quoted only from `ZEC_SHIELDED_PROVIDERS` — EXOLIX and MAYACHAIN, of which
+only EXOLIX passes `ALLOWED_PROVIDERS`; MAYACHAIN executes via `thorchain_deposit` and would need the memoless
+flow first). So `fetchPairRates()` — which every scene calls instead of `fetchRate` — quotes both identifiers
+when the receive asset is ZEC, pins the requested identifier onto each route's `buyAsset`, and merges them into
+one list; a failure of the shielded leg never takes the transparent quotes down. From there the route decides
+everything: `zecRouteTag` labels it in the list, `zecAddressMismatch` refuses an address of the wrong family at
+input, and `buyAssetForRoute` is what `POST /v2/swap` and the track URL are given. `zecRefundMismatch` applies
+the same rule to a ZEC refund address, keyed on the provider rather than the route.
+
+**As of Aug 2026 the aggregator does not know `ZEC.ZECSHIELDED`** (`tokenNotSupported`) and EXOLIX does not
+quote `ZEC.ZEC`, so shielded routes never appear yet — the code is live but dormant until the API adds the token.

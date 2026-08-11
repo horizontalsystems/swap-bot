@@ -47,6 +47,19 @@ export const fa: Strings = {
   quoteLine: '{index}. {amount} {ticker} {receiveUsd} • 🕐 {time}',
   quoteError: '💱 تبادل\n\n{progress}\n\n❌ خطا در دریافت قیمت: {error}',
 
+  // --- Zcash address families ---
+  zecAddressNote:
+    'ℹ️ ZEC: هر مسیر با نوع آدرسی که به آن واریز می‌کند مشخص شده است — شفاف (t1…/t3…) یا محافظت‌شده (zs1…/u1…). مسیری را انتخاب کنید که با کیف پول شما هم‌خوانی دارد.',
+  zecRouteTransparent: 'شفاف t1/t3',
+  zecRouteShielded: 'محافظت‌شده zs1/u1',
+  zecNeedsTransparent:
+    '⚠️ {provider} فقط به آدرس‌های شفاف ZEC (t1…/t3…) واریز می‌کند.\n' +
+    'یک آدرس شفاف وارد کنید، یا به عقب برگردید و مسیر محافظت‌شده انتخاب کنید.',
+  zecNeedsShielded:
+    '⚠️ {provider} به آدرس‌های محافظت‌شده ZEC (zs1…/u1…) واریز می‌کند.\n' +
+    'یک آدرس محافظت‌شده وارد کنید، یا به عقب برگردید و مسیر شفاف انتخاب کنید.',
+  chooseAnotherProvider: '👉 ارائه‌دهنده دیگری انتخاب کنید و دوباره تلاش کنید.',
+
   // --- Receive floor ---
   // `{minLine}` is built in code (see buildMinLine) and carries its own trailing newline,
   // so it collapses to nothing when the route has no floor worth showing.
