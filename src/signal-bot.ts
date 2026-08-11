@@ -3,8 +3,10 @@ import { startPeriodicSync, stopPeriodicSync, syncTokensAtStartup } from './serv
 import { closeDb } from './db/database'
 import { cleanupSessions, handleSwapMessage } from './scenes/swap/signal'
 import { SignalRpcClient, SignalReceiveParams } from './utils/signal-rpc'
+import { useApiKeyFor } from './utils/api'
 
 dotenv.config()
+useApiKeyFor('signal')
 
 // The bot talks to a locally-running `signal-cli daemon --tcp` over JSON-RPC.
 // The bot's Signal account must already be registered/linked out of band.

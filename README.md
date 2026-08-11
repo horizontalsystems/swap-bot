@@ -9,7 +9,9 @@ npm install
 cp .env.example .env   # then fill in the values
 ```
 
-`.env` requires `SWAP_API_KEY` and `BOT_TOKEN` (Telegram). The SimpleX bot also reads `SIMPLEX_WS_URL` (defaults to `ws://localhost:3030`) and needs a running SimpleX CLI with an active user.
+`.env` requires `BOT_TOKEN` (Telegram) and one swap API key per bot: `SWAP_API_KEY_TELEGRAM`,
+`SWAP_API_KEY_SIMPLEX`, `SWAP_API_KEY_SIGNAL`. There is no shared key — a bot whose own key is missing exits
+at startup. The SimpleX bot also reads `SIMPLEX_WS_URL` (defaults to `ws://localhost:3030`) and needs a running SimpleX CLI with an active user.
 
 The Signal bot reads `SIGNAL_ACCOUNT` (the bot's registered phone number, e.g. `+15551234567`), plus `SIGNAL_RPC_HOST` (default `127.0.0.1`) and `SIGNAL_RPC_PORT` (default `7583`). It talks to a locally-running [`signal-cli`](https://github.com/AsamK/signal-cli) JSON-RPC daemon over TCP.
 

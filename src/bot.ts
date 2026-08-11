@@ -5,8 +5,10 @@ import { swapWizard } from './scenes/swap'
 import { startPeriodicSync, stopPeriodicSync, syncTokensAtStartup } from './services/token-sync'
 import { closeDb } from './db/database'
 import { s } from './config/strings'
+import { useApiKeyFor } from './utils/api'
 
 dotenv.config()
+useApiKeyFor('telegram')
 
 const token = process.env.BOT_TOKEN
 if (!token) {

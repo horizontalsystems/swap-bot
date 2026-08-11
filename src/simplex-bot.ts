@@ -4,8 +4,10 @@ import dotenv from 'dotenv'
 import { startPeriodicSync, stopPeriodicSync, syncTokensAtStartup } from './services/token-sync'
 import { closeDb } from './db/database'
 import { cleanupSessions, handleSwapMessage } from './scenes/swap/simplex'
+import { useApiKeyFor } from './utils/api'
 
 dotenv.config()
+useApiKeyFor('simplex')
 
 const SIMPLEX_WS_URL = process.env.SIMPLEX_WS_URL ?? 'ws://localhost:3030'
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes

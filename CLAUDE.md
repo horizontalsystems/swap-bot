@@ -35,8 +35,14 @@ scenes/swap/index.ts  scenes/swap/simplex.ts  scenes/swap/signal.ts   ← per-pl
       config/assets.ts (provider + featured allowlists)   config/locales/ (en, ru, zh, fa)
 ```
 
-Every entrypoint follows the same shape: `syncTokensAtStartup()` → `startPeriodicSync()` → connect → on
-transport loss `process.exit(1)` so pm2 restarts with a fresh connection → SIGINT/SIGTERM shutdown closes the DB.
+Every entrypoint follows the same shape: `useApiKeyFor(<platform>)` → `syncTokensAtStartup()` →
+`startPeriodicSync()` → connect → on transport loss `process.exit(1)` so pm2 restarts with a fresh connection →
+SIGINT/SIGTERM shutdown closes the DB.
+
+`useApiKeyFor()` selects that process's swap API key (`SWAP_API_KEY_TELEGRAM` / `_SIMPLEX` / `_SIGNAL`), so the
+three bots bill and rate-limit separately. There is no shared fallback key: the call throws when its key is
+missing, and `getApiKey()` throws when no platform was selected at all — so a misconfigured bot dies at startup
+instead of on the user's first quote. It must run after `dotenv.config()` and before the first request.
 
 ### The swap flow is implemented three times
 
@@ -59,7 +65,7 @@ Inserting or removing a step means updating the `go_back` switch, every `selectS
 ### Quotes, providers, and the THORChain special case
 
 `utils/api.ts` talks to the aggregator's **v2** API, `https://swap-api.unstoppable.money/v2`, with `x-api-key`
-(`SWAP_API_KEY`). v2 splits pricing from committing:
+(the calling bot's own key, see `useApiKeyFor` above). v2 splits pricing from committing:
 
 - `POST /rate` (`fetchRate`) — read-only fan-out across providers, returns `{ routes, providerErrors }`. A 404
   means every provider declined and is converted to an empty route list rather than thrown.

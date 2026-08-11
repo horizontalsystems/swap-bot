@@ -3,11 +3,44 @@ import { ProviderError, QuoteRoute, RateResponse, TokenListItem } from '../types
 const API_BASE = 'https://swap-api.unstoppable.money/v2'
 const SLIPPAGE = 1
 
-function getApiKey(): string {
-  const apiKey = process.env.SWAP_API_KEY
-  if (!apiKey) {
-    throw new Error('SWAP_API_KEY is missing in .env')
+/**
+ * Each bot runs as its own process and bills the swap API under its own key, so usage and
+ * rate limits stay separable per chat platform. There is no shared key to fall back on:
+ * the entrypoint claims its own with `useApiKeyFor()` at startup, which throws right there
+ * if the key is missing rather than letting the bot come up and fail on the first quote.
+ */
+export type BotPlatform = 'telegram' | 'simplex' | 'signal'
+
+const PLATFORM_KEY_ENV: Record<BotPlatform, string> = {
+  telegram: 'SWAP_API_KEY_TELEGRAM',
+  simplex: 'SWAP_API_KEY_SIMPLEX',
+  signal: 'SWAP_API_KEY_SIGNAL'
+}
+
+let platform: BotPlatform | undefined
+
+/** Call once at startup, after `dotenv.config()` and before the first API request. */
+export function useApiKeyFor(bot: BotPlatform): void {
+  const envName = PLATFORM_KEY_ENV[bot]
+  if (!process.env[envName]) {
+    throw new Error(`${envName} is missing in .env`)
   }
+
+  platform = bot
+  console.log(`[API] Using ${envName}`)
+}
+
+function getApiKey(): string {
+  if (!platform) {
+    throw new Error('No swap API key selected — call useApiKeyFor() at startup')
+  }
+
+  const envName = PLATFORM_KEY_ENV[platform]
+  const apiKey = process.env[envName]
+  if (!apiKey) {
+    throw new Error(`${envName} is missing in .env`)
+  }
+
   return apiKey
 }
 
