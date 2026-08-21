@@ -1,8 +1,8 @@
 import { Markup, Scenes } from 'telegraf'
 import { message } from 'telegraf/filters'
-import { ALLOWED_PROVIDERS, FEATURED_IDENTIFIERS } from '../../config/assets'
+import { FEATURED_IDENTIFIERS } from '../../config/assets'
 import { s, t } from '../../config/strings'
-import { getAssetByIdentifier, getAssets, getProvidersForPair, searchAssets } from '../../db/tokens'
+import { getAssetByIdentifier, getAssets, searchAssets } from '../../db/tokens'
 import { SwapContext } from '../../types/context'
 import { getAssetPrice, getSwapPrices } from '../../services/prices'
 import { amlFlaggedAddress, fetchSwap } from '../../utils/api'
@@ -28,10 +28,13 @@ import {
   formatAmount,
   formatTime,
   formatUsd,
+  isSplitPayoutRoute,
   isZecIdentifier,
+  pairProviders,
   providerLabel,
   providerName,
   searchResultsKeyboard,
+  secureRow,
   shortenAddress,
   thorchainMemo,
   truncateToDecimals,
@@ -67,6 +70,7 @@ async function restartWizard(ctx: SwapContext) {
   ctx.scene.session.routes = undefined
   ctx.scene.session.quote = undefined
   ctx.scene.session.searchResults = undefined
+  ctx.scene.session.secure = undefined
 
   const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
 
@@ -77,7 +81,7 @@ async function restartWizard(ctx: SwapContext) {
 
   const msg = await ctx.reply(S.selectSendAsset, {
     parse_mode: 'Markdown',
-    ...assetKeyboard(featuredAssets, S)
+    ...assetKeyboard(featuredAssets, S, undefined, false, ctx.scene.session.secure)
   })
 
   ctx.scene.session.swapMessageId = msg.message_id
@@ -89,14 +93,17 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
   const { assetIn, assetOut, amount } = ctx.scene.session
   const progress = buildProgress(ctx.scene.session, S)
 
-  const providers = getProvidersForPair(assetIn!.identifier, assetOut!.identifier).filter(p =>
-    ALLOWED_PROVIDERS.includes(p)
-  )
+  const secure = ctx.scene.session.secure
+  const providers = pairProviders(assetIn!.identifier, assetOut!.identifier, secure)
 
   // Receiving ZEC also pulls in the shielded catalog's providers, which sit outside the
   // pair's own provider list.
-  if (providers.length === 0 && zecShieldedProviders(assetOut!.identifier).length === 0) {
-    await editSwapMessage(ctx, t(S.noProviders, { progress }))
+  if (providers.length === 0 && zecShieldedProviders(assetOut!.identifier, secure).length === 0) {
+    // The confidential catalog is far thinner than the public one, so leave the toggle in
+    // reach instead of dead-ending a pair that a standard swap could serve.
+    await editSwapMessage(ctx, t(secure ? S.noProvidersSecure : S.noProviders, { progress }), {
+      ...Markup.inlineKeyboard([secureRow(S, secure), backCancelRow(S)])
+    })
     return false
   }
 
@@ -106,7 +113,8 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
     sellAsset: assetIn!.identifier,
     buyAsset: assetOut!.identifier,
     sellAmount: amount!.toString(),
-    providers
+    providers,
+    secure
   })
 
   if (!quoteResponse.routes || quoteResponse.routes.length === 0) {
@@ -150,6 +158,7 @@ async function fetchAndShowRoutes(ctx: SwapContext): Promise<boolean> {
   })
 
   const buttonRows = routeButtons.map(btn => [btn])
+  buttonRows.push(secureRow(S, secure))
   buttonRows.push(backCancelRow(S))
 
   // Receiving ZEC: the address family decides which of these routes can actually pay out,
@@ -187,6 +196,7 @@ async function showSummary(ctx: SwapContext) {
     time: formatTime(quote!.estimatedTime.total)
   })
   if (!refundAddress) summaryText = summaryText.replace(/↩️.*\n/g, '')
+  if (isSplitPayoutRoute(quote)) summaryText += `\n\n${S.splitPayoutNote}`
 
   await editSwapMessage(ctx, summaryText, {
     ...Markup.inlineKeyboard([[Markup.button.callback(S.confirmButton, 'confirm_swap')], backCancelRow(S)])
@@ -210,6 +220,8 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     ctx.scene.session.refundAddress = undefined
     ctx.scene.session.routes = undefined
     ctx.scene.session.quote = undefined
+    ctx.scene.session.searchResults = undefined
+    ctx.scene.session.secure = undefined
 
     const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
 
@@ -220,7 +232,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
 
     const msg = await ctx.reply(S.selectSendAsset, {
       parse_mode: 'Markdown',
-      ...assetKeyboard(featuredAssets, S)
+      ...assetKeyboard(featuredAssets, S, undefined, false, ctx.scene.session.secure)
     })
 
     ctx.scene.session.swapMessageId = msg.message_id
@@ -239,7 +251,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
       ctx.scene.session.searchResults = results
       if (results.length > 0) {
         await editSwapMessage(ctx, S.selectSendAsset, {
-          ...searchResultsKeyboard(results, S)
+          ...searchResultsKeyboard(results, S, undefined, ctx.scene.session.secure)
         })
       } else {
         await editSwapMessage(ctx, t(S.searchNoResults, { progress: '' }).replace(/\n{3,}/g, '\n\n'), {
@@ -263,7 +275,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
       const progress = buildProgress(ctx.scene.session, S)
       if (results.length > 0) {
         await editSwapMessage(ctx, t(S.selectReceiveAsset, { progress }), {
-          ...searchResultsKeyboard(results, S, ctx.scene.session.assetIn?.identifier)
+          ...searchResultsKeyboard(results, S, ctx.scene.session.assetIn?.identifier, ctx.scene.session.secure)
         })
       } else {
         await editSwapMessage(ctx, t(S.searchNoResults, { progress }), {
@@ -293,7 +305,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     if (!/^\d*\.?\d+$/.test(numStr)) {
       const progress = buildProgress(ctx.scene.session, S)
       await editSwapMessage(ctx, t(S.invalidAmount, { progress, asset }), {
-        ...Markup.inlineKeyboard([backCancelRow(S)])
+        ...Markup.inlineKeyboard([secureRow(S, ctx.scene.session.secure), backCancelRow(S)])
       })
       return
     }
@@ -302,7 +314,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
     if (parsedAmount <= 0) {
       const progress = buildProgress(ctx.scene.session, S)
       await editSwapMessage(ctx, t(S.invalidAmount, { progress, asset }), {
-        ...Markup.inlineKeyboard([backCancelRow(S)])
+        ...Markup.inlineKeyboard([secureRow(S, ctx.scene.session.secure), backCancelRow(S)])
       })
       return
     }
@@ -312,7 +324,7 @@ const swapWizard = new Scenes.WizardScene<SwapContext>(
       if (price == null) {
         const progress = buildProgress(ctx.scene.session, S)
         await editSwapMessage(ctx, t(S.priceUnavailable, { progress, asset }), {
-          ...Markup.inlineKeyboard([backCancelRow(S)])
+          ...Markup.inlineKeyboard([secureRow(S, ctx.scene.session.secure), backCancelRow(S)])
         })
         return
       }
@@ -477,6 +489,7 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
     }
 
     ctx.scene.session.assetIn = asset
+    ctx.scene.session.searchResults = undefined
     await ctx.answerCbQuery(`Selected ${assetCaption(asset)}`)
     if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
 
@@ -485,7 +498,7 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
     const progress = buildProgress(ctx.scene.session, S)
     await ctx.editMessageText(t(S.selectReceiveAsset, { progress }), {
       parse_mode: 'Markdown',
-      ...assetKeyboard(featuredAssets, S, asset.identifier, true)
+      ...assetKeyboard(featuredAssets, S, asset.identifier, true, ctx.scene.session.secure)
     })
 
     return ctx.wizard.next()
@@ -500,18 +513,18 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
       return
     }
 
-    const providers = getProvidersForPair(ctx.scene.session.assetIn!.identifier, identifier).filter(p =>
-      ALLOWED_PROVIDERS.includes(p)
-    )
+    const secure = ctx.scene.session.secure
+    const providers = pairProviders(ctx.scene.session.assetIn!.identifier, identifier, secure)
     ctx.scene.session.assetOut = asset
+    ctx.scene.session.searchResults = undefined
     if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
 
-    if (providers.length === 0 && zecShieldedProviders(asset.identifier).length === 0) {
+    if (providers.length === 0 && zecShieldedProviders(asset.identifier, secure).length === 0) {
       await ctx.answerCbQuery()
       const progress = buildProgress(ctx.scene.session, S)
-      await ctx.editMessageText(t(S.noProviders, { progress }), {
+      await ctx.editMessageText(t(secure ? S.noProvidersSecure : S.noProviders, { progress }), {
         parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([backCancelRow(S)])
+        ...Markup.inlineKeyboard([secureRow(S, secure), backCancelRow(S)])
       })
       ctx.wizard.selectStep(3)
       return
@@ -522,7 +535,7 @@ swapWizard.action(/^select_(.+)$/, async ctx => {
     const progress = buildProgress(ctx.scene.session, S)
     await ctx.editMessageText(t(S.enterAmount, { progress, asset: assetCaption(ctx.scene.session.assetIn!) }), {
       parse_mode: 'Markdown',
-      ...Markup.inlineKeyboard([backCancelRow(S)])
+      ...Markup.inlineKeyboard([secureRow(S, ctx.scene.session.secure), backCancelRow(S)])
     })
 
     return ctx.wizard.next()
@@ -550,27 +563,26 @@ swapWizard.action(/^sselect_(\d+)$/, async ctx => {
     const progress = buildProgress(ctx.scene.session, S)
     await ctx.editMessageText(t(S.selectReceiveAsset, { progress }), {
       parse_mode: 'Markdown',
-      ...assetKeyboard(featuredAssets, S, asset.identifier, true)
+      ...assetKeyboard(featuredAssets, S, asset.identifier, true, ctx.scene.session.secure)
     })
 
     return ctx.wizard.next()
   }
 
   if (ctx.wizard.cursor === 2) {
-    const providers = getProvidersForPair(ctx.scene.session.assetIn!.identifier, asset.identifier).filter(p =>
-      ALLOWED_PROVIDERS.includes(p)
-    )
+    const secure = ctx.scene.session.secure
+    const providers = pairProviders(ctx.scene.session.assetIn!.identifier, asset.identifier, secure)
 
     ctx.scene.session.assetOut = asset
     ctx.scene.session.searchResults = undefined
     if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
 
-    if (providers.length === 0 && zecShieldedProviders(asset.identifier).length === 0) {
+    if (providers.length === 0 && zecShieldedProviders(asset.identifier, secure).length === 0) {
       await ctx.answerCbQuery()
       const progress = buildProgress(ctx.scene.session, S)
-      await ctx.editMessageText(t(S.noProviders, { progress }), {
+      await ctx.editMessageText(t(secure ? S.noProvidersSecure : S.noProviders, { progress }), {
         parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([backCancelRow(S)])
+        ...Markup.inlineKeyboard([secureRow(S, secure), backCancelRow(S)])
       })
       ctx.wizard.selectStep(3)
       return
@@ -581,7 +593,7 @@ swapWizard.action(/^sselect_(\d+)$/, async ctx => {
     const progress = buildProgress(ctx.scene.session, S)
     await ctx.editMessageText(t(S.enterAmount, { progress, asset: assetCaption(ctx.scene.session.assetIn!) }), {
       parse_mode: 'Markdown',
-      ...Markup.inlineKeyboard([backCancelRow(S)])
+      ...Markup.inlineKeyboard([secureRow(S, ctx.scene.session.secure), backCancelRow(S)])
     })
 
     return ctx.wizard.next()
@@ -737,7 +749,8 @@ swapWizard.action('confirm_swap', async ctx => {
     const confirmSendUsd = inPrice != null ? inPrice * sendAmount : null
     const confirmReceiveUsd = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmount) : null
 
-    const warning = isThorchain ? `\n\n${S.amountWarning}` : ''
+    // THORChain needs the exact amount; a split-settlement route pays out more than once.
+    const warning = isThorchain ? `\n\n${S.amountWarning}` : isSplitPayoutRoute(route) ? `\n\n${S.splitPayoutNote}` : ''
 
     const links: string[] = []
 
@@ -839,10 +852,11 @@ swapWizard.action('go_back', async ctx => {
     case 2: {
       // At assetOut selection → back to assetIn
       ctx.scene.session.assetIn = undefined
+      ctx.scene.session.searchResults = undefined
       const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
       await ctx.editMessageText(S.selectSendAsset, {
         parse_mode: 'Markdown',
-        ...assetKeyboard(featuredAssets, S)
+        ...assetKeyboard(featuredAssets, S, undefined, false, ctx.scene.session.secure)
       })
       ctx.wizard.selectStep(1)
       break
@@ -850,11 +864,12 @@ swapWizard.action('go_back', async ctx => {
     case 3: {
       // At amount input → back to assetOut
       ctx.scene.session.assetOut = undefined
+      ctx.scene.session.searchResults = undefined
       const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
       const progress = buildProgress(ctx.scene.session, S)
       await ctx.editMessageText(t(S.selectReceiveAsset, { progress }), {
         parse_mode: 'Markdown',
-        ...assetKeyboard(featuredAssets, S, ctx.scene.session.assetIn!.identifier, true)
+        ...assetKeyboard(featuredAssets, S, ctx.scene.session.assetIn!.identifier, true, ctx.scene.session.secure)
       })
       ctx.wizard.selectStep(2)
       break
@@ -868,7 +883,7 @@ swapWizard.action('go_back', async ctx => {
       const progress = buildProgress(ctx.scene.session, S)
       await ctx.editMessageText(t(S.enterAmount, { progress, asset: assetCaption(ctx.scene.session.assetIn!) }), {
         parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([backCancelRow(S)])
+        ...Markup.inlineKeyboard([secureRow(S, ctx.scene.session.secure), backCancelRow(S)])
       })
       ctx.wizard.selectStep(3)
       break
@@ -933,6 +948,75 @@ swapWizard.action('go_back', async ctx => {
   }
 })
 
+// Secure swap toggle — the mode picks the provider list a quote is fanned out to, so it
+// is offered on every screen up to and including the route list. Flipping it there simply
+// re-quotes the same pair on the other rail; once a route is chosen the quote is bound to
+// one provider and the toggle is gone from the keyboard.
+swapWizard.action('toggle_secure', async ctx => {
+  const S = s(ctx.from?.language_code)
+  const secure = !ctx.scene.session.secure
+  ctx.scene.session.secure = secure
+  await ctx.answerCbQuery(secure ? S.secureEnabled : S.secureDisabled)
+
+  // `searchResults` is cleared wherever the featured grid is rendered, so a non-empty
+  // list means the search screen is the one on display and has to be re-rendered as such.
+  const { assetIn, assetOut, searchResults } = ctx.scene.session
+  const featuredAssets = getAssets(FEATURED_IDENTIFIERS)
+  const progress = buildProgress(ctx.scene.session, S)
+
+  switch (ctx.wizard.cursor) {
+    case 1:
+      await ctx.editMessageText(S.selectSendAsset, {
+        parse_mode: 'Markdown',
+        ...(searchResults?.length
+          ? searchResultsKeyboard(searchResults, S, undefined, secure)
+          : assetKeyboard(featuredAssets, S, undefined, false, secure))
+      })
+      break
+
+    case 2:
+      await ctx.editMessageText(t(S.selectReceiveAsset, { progress }), {
+        parse_mode: 'Markdown',
+        ...(searchResults?.length
+          ? searchResultsKeyboard(searchResults, S, assetIn?.identifier, secure)
+          : assetKeyboard(featuredAssets, S, assetIn?.identifier, true, secure))
+      })
+      break
+
+    case 3: {
+      // The amount prompt, or the "no providers" screen the receive-asset step lands on —
+      // which of the two it becomes depends on what the new rail can serve.
+      if (!assetIn || !assetOut) return
+      const serves =
+        pairProviders(assetIn.identifier, assetOut.identifier, secure).length > 0 ||
+        zecShieldedProviders(assetOut.identifier, secure).length > 0
+      await ctx.editMessageText(
+        serves
+          ? t(S.enterAmount, { progress, asset: assetCaption(assetIn) })
+          : t(secure ? S.noProvidersSecure : S.noProviders, { progress }),
+        {
+          parse_mode: 'Markdown',
+          ...Markup.inlineKeyboard([secureRow(S, secure), backCancelRow(S)])
+        }
+      )
+      break
+    }
+
+    case 4:
+      ctx.scene.session.routes = undefined
+      ctx.scene.session.quote = undefined
+      try {
+        await fetchAndShowRoutes(ctx)
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : 'Unknown error'
+        console.error('[Swap] Quote error:', error)
+        await editSwapMessage(ctx, t(S.quoteError, { progress, error: errMsg }))
+        return ctx.scene.leave()
+      }
+      break
+  }
+})
+
 // Clear search — return to featured list
 swapWizard.action('clear_search', async ctx => {
   const S = s(ctx.from?.language_code)
@@ -943,13 +1027,13 @@ swapWizard.action('clear_search', async ctx => {
   if (ctx.wizard.cursor === 1) {
     await ctx.editMessageText(S.selectSendAsset, {
       parse_mode: 'Markdown',
-      ...assetKeyboard(featuredAssets, S)
+      ...assetKeyboard(featuredAssets, S, undefined, false, ctx.scene.session.secure)
     })
   } else if (ctx.wizard.cursor === 2) {
     const progress = buildProgress(ctx.scene.session, S)
     await ctx.editMessageText(t(S.selectReceiveAsset, { progress }), {
       parse_mode: 'Markdown',
-      ...assetKeyboard(featuredAssets, S, ctx.scene.session.assetIn?.identifier, true)
+      ...assetKeyboard(featuredAssets, S, ctx.scene.session.assetIn?.identifier, true, ctx.scene.session.secure)
     })
   }
 })
@@ -981,7 +1065,7 @@ swapWizard.action('change_amount', async ctx => {
   const progress = buildProgress(ctx.scene.session, S)
   await ctx.editMessageText(t(S.enterAmount, { progress, asset: assetCaption(ctx.scene.session.assetIn!) }), {
     parse_mode: 'Markdown',
-    ...Markup.inlineKeyboard([backCancelRow(S)])
+    ...Markup.inlineKeyboard([secureRow(S, ctx.scene.session.secure), backCancelRow(S)])
   })
   ctx.wizard.selectStep(3)
 })

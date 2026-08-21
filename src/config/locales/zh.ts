@@ -35,6 +35,8 @@ export const zh: Strings = {
   // --- Quotes ---
   fetchingQuotes: '💱 兑换\n\n{progress}\n\n⏳ 正在获取报价...',
   noProviders: '💱 兑换\n\n{progress}\n\n❌ 没有提供商支持此交易对。',
+  noProvidersSecure:
+    '💱 兑换\n\n{progress}\n\n' + '❌ 此交易对没有机密路线。\n' + '关闭安全兑换即可获取常规提供商的报价。',
   noRoutes: '💱 兑换\n\n{progress}\n\n❌ 此交易对没有可用的兑换路线。',
   allProvidersFailed: '💱 兑换\n\n{progress}\n\n❌ 没有提供商能够完成此兑换。请尝试其他金额或交易对。',
   quotesHeader: '💱 兑换\n\n{progress}\n\n' + '{count} 个报价可用 — 请选择路线 👇\n\n{routes}',
@@ -124,6 +126,13 @@ export const zh: Strings = {
   changeAmount: '💰 修改金额',
   newSwap: '🔄 新兑换',
 
+  // --- Secure (confidential) swap ---
+  secureOn: '🔒 安全兑换：开',
+  secureOff: '🔓 安全兑换：关',
+  secureEnabled: '已开启安全兑换 — 仅显示机密路线',
+  secureDisabled: '已关闭安全兑换 — 使用常规提供商',
+  splitPayoutNote: 'ℹ️ 此路线会将付款拆分为多笔转账，并在随机延迟后发送 — 请预期收到多笔入账交易。',
+
   // --- Price ---
   priceUnavailable: '💱 兑换\n\n{progress}\n\n' + '⚠️ 价格不可用：{asset}。\n' + '请直接输入代币数量。',
 
@@ -138,6 +147,7 @@ export const zh: Strings = {
   progressProvider: '提供商：{provider}',
   progressDestination: '接收地址：{address}',
   progressRefund: '退款地址：{address}',
+  progressSecure: '🔒 安全兑换',
 
   // --- FAQ ---
   faq:
@@ -161,6 +171,9 @@ export const zh: Strings = {
     'THORChain DEX 兑换不需要退款地址。\n\n' +
     '*"发送准确金额"是什么意思？*\n\n' +
     '某些提供商（尤其是 THORChain）要求发送精确的指定金额。发送多于或少于指定金额可能导致：兑换失败、延迟或资金损失。请始终发送显示的准确金额。\n\n' +
+    '*什么是安全兑换？*\n\n' +
+    '安全兑换在机密通道上执行：付款无法在链上与您的存款关联。\n\n' +
+    '在获取报价前开启它，则只提供机密路线。相比常规兑换，支持的资产更少，汇率通常略低，结算时间也稍长。\n\n' +
     '*如何追踪我的兑换？*\n\n' +
     '确认后，机器人会提供追踪兑换链接。您可以监控：兑换进度和执行状态。\n\n' +
     '*可以取消兑换吗？*\n\n' +

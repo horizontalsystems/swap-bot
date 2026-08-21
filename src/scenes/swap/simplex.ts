@@ -1,8 +1,8 @@
 import { ChatClient } from 'simplex-chat'
 import { T } from '@simplex-chat/types'
-import { ALLOWED_PROVIDERS, FEATURED_IDENTIFIERS } from '../../config/assets'
+import { FEATURED_IDENTIFIERS } from '../../config/assets'
 import { s, t } from '../../config/strings'
-import { getAssets, getProvidersForPair, searchAssets } from '../../db/tokens'
+import { getAssets, searchAssets } from '../../db/tokens'
 import { Asset, Attachment, QuoteRoute, SwapSessionData } from '../../types/context'
 import { getAssetPrice, getSwapPrices } from '../../services/prices'
 import { amlFlaggedAddress, fetchSwap } from '../../utils/api'
@@ -22,7 +22,9 @@ import {
   formatAmount,
   formatTime,
   formatUsd,
+  isSplitPayoutRoute,
   isZecIdentifier,
+  pairProviders,
   providerName,
   shortenAddress,
   thorchainMemo,
@@ -59,6 +61,8 @@ interface SimplexSwapSession {
   routes?: QuoteRoute[]
   quote?: QuoteRoute
   menuItems?: Asset[]
+  /** Secure swap: quote the confidential rails alone (see SECURE_PROVIDERS). */
+  secure?: boolean
   lastActivity: number
 }
 
@@ -135,11 +139,17 @@ const HINT_LABELS: Record<string, string> = {
   b: 'b = back',
   y: 'y = yes',
   r: 'r = reset search',
-  f: 'f = FAQ'
+  f: 'f = FAQ',
+  p: 'p = secure swap on/off'
 }
 
 function hint(...keys: string[]): string {
   return '\n\n' + keys.map(k => HINT_LABELS[k] ?? k).join('\n')
+}
+
+/** The secure-swap state, for the one screen that has no {progress} block to carry it. */
+function secureLine(session: SimplexSwapSession): string {
+  return session.secure ? '\n\n' + S.progressSecure : ''
 }
 
 function assetList(assets: Asset[], disabledIdentifier?: string): string {
@@ -162,7 +172,7 @@ async function showSelectSendAsset(client: ChatClient, contactId: number, sessio
     return
   }
   session.menuItems = featured
-  await send(client, contactId, S.selectSendAsset + '\n\n' + assetList(featured) + hint('c'))
+  await send(client, contactId, S.selectSendAsset + secureLine(session) + '\n\n' + assetList(featured) + hint('c', 'p'))
 }
 
 async function showSelectRecvAsset(client: ChatClient, contactId: number, session: SimplexSwapSession): Promise<void> {
@@ -174,7 +184,7 @@ async function showSelectRecvAsset(client: ChatClient, contactId: number, sessio
     t(S.selectReceiveAsset, { progress: progress(session) }) +
       '\n\n' +
       assetList(featured, session.assetIn?.identifier) +
-      hint('b', 'c')
+      hint('b', 'c', 'p')
   )
 }
 
@@ -182,7 +192,7 @@ async function showEnterAmount(client: ChatClient, contactId: number, session: S
   await send(
     client,
     contactId,
-    t(S.enterAmount, { progress: progress(session), asset: code(assetCaption(session.assetIn!)) }) + hint('b', 'c')
+    t(S.enterAmount, { progress: progress(session), asset: code(assetCaption(session.assetIn!)) }) + hint('b', 'c', 'p')
   )
 }
 
@@ -211,14 +221,18 @@ async function fetchAndShowRoutes(
   const { assetIn, assetOut, amount } = session
   const prog = progress(session)
 
-  const providers = getProvidersForPair(assetIn!.identifier, assetOut!.identifier).filter(p =>
-    ALLOWED_PROVIDERS.includes(p)
-  )
+  const secure = session.secure
+  const providers = pairProviders(assetIn!.identifier, assetOut!.identifier, secure)
 
   // Receiving ZEC also pulls in the shielded catalog's providers, which sit outside the
   // pair's own provider list.
-  if (providers.length === 0 && zecShieldedProviders(assetOut!.identifier).length === 0) {
-    await send(client, contactId, t(S.noProviders, { progress: prog }))
+  if (providers.length === 0 && zecShieldedProviders(assetOut!.identifier, secure).length === 0) {
+    // The confidential catalog is far thinner than the public one, so point at the way out.
+    await send(
+      client,
+      contactId,
+      t(secure ? S.noProvidersSecure : S.noProviders, { progress: prog }) + hint('b', 'c', 'p')
+    )
     return false
   }
 
@@ -228,7 +242,8 @@ async function fetchAndShowRoutes(
     sellAsset: assetIn!.identifier,
     buyAsset: assetOut!.identifier,
     sellAmount: amount!.toString(),
-    providers
+    providers,
+    secure
   })
 
   if (!quoteResponse.routes || quoteResponse.routes.length === 0) {
@@ -271,7 +286,7 @@ async function fetchAndShowRoutes(
       // Receiving ZEC: the address family decides which of these routes can pay out at all
       (isZecIdentifier(assetOut!.identifier) ? `\n\n${S.zecAddressNote}` : '') +
       `\n\n${count === 1 ? '1 = select route' : `1-${count} = select route`}\n` +
-      hint('b', 'c').trimStart()
+      hint('b', 'c', 'p').trimStart()
   )
 
   return true
@@ -298,6 +313,7 @@ async function showSummary(client: ChatClient, contactId: number, session: Simpl
     time: formatTime(quote!.estimatedTime.total)
   })
   if (!refundAddress) summaryText = summaryText.replace(/↩️.*\n/g, '')
+  if (isSplitPayoutRoute(quote)) summaryText += `\n\n${S.splitPayoutNote}`
 
   await send(client, contactId, summaryText + hint('y', 'b', 'c'))
 }
@@ -350,16 +366,19 @@ async function handleSelectRecvAsset(
       return
     }
 
-    const providers = getProvidersForPair(session.assetIn!.identifier, asset.identifier).filter(p =>
-      ALLOWED_PROVIDERS.includes(p)
-    )
+    const secure = session.secure
+    const providers = pairProviders(session.assetIn!.identifier, asset.identifier, secure)
 
     session.assetOut = asset
     session.menuItems = undefined
     if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
 
-    if (providers.length === 0 && zecShieldedProviders(asset.identifier).length === 0) {
-      await send(client, contactId, t(S.noProviders, { progress: progress(session) }) + hint('b', 'c'))
+    if (providers.length === 0 && zecShieldedProviders(asset.identifier, secure).length === 0) {
+      await send(
+        client,
+        contactId,
+        t(secure ? S.noProvidersSecure : S.noProviders, { progress: progress(session) }) + hint('b', 'c', 'p')
+      )
       // Stay at ENTER_AMOUNT so "b" returns to SELECT_RECV_ASSET
       session.step = SwapStep.ENTER_AMOUNT
       return
@@ -662,7 +681,8 @@ async function executeSwap(client: ChatClient, contactId: number, session: Simpl
     const confirmSendUsd = inPrice != null ? inPrice * sendAmount : null
     const confirmReceiveUsd = outPrice != null ? outPrice * parseFloat(route.expectedBuyAmount) : null
 
-    const warning = isThorchain ? `\n\n${S.amountWarning}` : ''
+    // THORChain needs the exact amount; a split-settlement route pays out more than once.
+    const warning = isThorchain ? `\n\n${S.amountWarning}` : isSplitPayoutRoute(route) ? `\n\n${S.splitPayoutNote}` : ''
 
     const links: string[] = []
     const paymentLink = paymentUri ? `https://swap.unstoppable.money/pay?uri=${encodeURIComponent(paymentUri)}` : null
@@ -808,6 +828,61 @@ async function handleBack(client: ChatClient, contactId: number, session: Simple
   }
 }
 
+/**
+ * Secure swap on/off. The mode picks the provider list a quote is fanned out to, so it can
+ * be flipped up to and including the route list — at that point the routes on screen came
+ * from the other rail and have to be re-quoted. Once a route is picked the quote is bound
+ * to one provider, so the switch is refused rather than silently ignored.
+ */
+async function handleToggleSecure(client: ChatClient, contactId: number, session: SimplexSwapSession): Promise<void> {
+  if (session.step > SwapStep.SELECT_ROUTE) {
+    await send(client, contactId, 'Secure swap can only be changed before you pick a route.' + hint('b', 'c'))
+    return
+  }
+
+  session.secure = !session.secure
+  await send(client, contactId, session.secure ? S.secureEnabled : S.secureDisabled)
+
+  switch (session.step) {
+    case SwapStep.SELECT_SEND_ASSET:
+      await showSelectSendAsset(client, contactId, session)
+      break
+    case SwapStep.SELECT_RECV_ASSET:
+      await showSelectRecvAsset(client, contactId, session)
+      break
+    case SwapStep.ENTER_AMOUNT: {
+      // The amount prompt doubles as the "no providers" screen the receive-asset step
+      // lands on, so re-check the pair against the rail we just switched to.
+      const { assetIn, assetOut } = session
+      const serves =
+        pairProviders(assetIn!.identifier, assetOut!.identifier, session.secure).length > 0 ||
+        zecShieldedProviders(assetOut!.identifier, session.secure).length > 0
+      if (serves) {
+        await showEnterAmount(client, contactId, session)
+      } else {
+        await send(
+          client,
+          contactId,
+          t(session.secure ? S.noProvidersSecure : S.noProviders, { progress: progress(session) }) + hint('b', 'c', 'p')
+        )
+      }
+      break
+    }
+    case SwapStep.SELECT_ROUTE:
+      session.routes = undefined
+      session.quote = undefined
+      try {
+        await fetchAndShowRoutes(client, contactId, session)
+      } catch (error) {
+        const errMsg = error instanceof Error ? error.message : 'Unknown error'
+        console.error('[Swap] Quote error:', error)
+        await send(client, contactId, t(S.quoteError, { progress: progress(session), error: errMsg }))
+        sessions.delete(contactId)
+      }
+      break
+  }
+}
+
 // --- Public API ---
 
 export async function handleSwapMessage(client: ChatClient, contactId: number, text: string): Promise<void> {
@@ -847,6 +922,11 @@ export async function handleSwapMessage(client: ChatClient, contactId: number, t
 
   if (lower === 'b') {
     await handleBack(client, contactId, session)
+    return
+  }
+
+  if (lower === 'p') {
+    await handleToggleSecure(client, contactId, session)
     return
   }
 

@@ -39,6 +39,10 @@ export const en = {
   // --- Quotes ---
   fetchingQuotes: '💱 Swap\n\n{progress}\n\n⏳ Fetching quotes...',
   noProviders: '💱 Swap\n\n{progress}\n\n❌ No providers support this pair.',
+  noProvidersSecure:
+    '💱 Swap\n\n{progress}\n\n' +
+    '❌ No confidential route for this pair.\n' +
+    'Turn secure swap off to quote the standard providers.',
   noRoutes: '💱 Swap\n\n{progress}\n\n❌ No swap routes available for this pair.',
   allProvidersFailed:
     '💱 Swap\n\n{progress}\n\n❌ No providers could fulfill this swap. Try a different amount or pair.',
@@ -134,6 +138,14 @@ export const en = {
   changeAmount: '💰 Change Amount',
   newSwap: '🔄 New Swap',
 
+  // --- Secure (confidential) swap ---
+  secureOn: '🔒 Secure swap: ON',
+  secureOff: '🔓 Secure swap: OFF',
+  secureEnabled: 'Secure swap on — confidential routes only',
+  secureDisabled: 'Secure swap off — standard providers',
+  splitPayoutNote:
+    'ℹ️ This route splits the payout into several transfers sent after a random delay — expect more than one incoming transaction.',
+
   // --- Price ---
   priceUnavailable:
     '💱 Swap\n\n{progress}\n\n' + '⚠️ Price unavailable for {asset}.\n' + 'Please enter the amount in tokens instead.',
@@ -149,6 +161,7 @@ export const en = {
   progressProvider: 'Provider: {provider}',
   progressDestination: 'Destination: {address}',
   progressRefund: 'Refund: {address}',
+  progressSecure: '🔒 Secure swap',
 
   // --- FAQ ---
   faq:
@@ -172,6 +185,9 @@ export const en = {
     'THORChain DEX swaps do not require a refund address.\n\n' +
     '*What does "Send exact amount" mean?*\n\n' +
     'Some providers (especially THORChain) require the precise amount shown. Sending more or less may cause: swap failure, delays or loss of funds. Always send the exact amount displayed.\n\n' +
+    '*What is a secure swap?*\n\n' +
+    'A secure swap is executed on a confidential rail: the payout cannot be linked on-chain to your deposit.\n\n' +
+    'Turn it on before requesting quotes and only confidential routes are offered. Fewer assets are supported than in a standard swap, the rate is usually slightly lower and settlement takes a little longer.\n\n' +
     '*How do I track my swap?*\n\n' +
     'After confirmation, the bot provides a Track Swap link. You can monitor: swap progress and execution status.\n\n' +
     '*Can I cancel a swap?*\n\n' +

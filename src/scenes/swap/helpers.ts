@@ -2,12 +2,15 @@ import { Markup } from 'telegraf'
 import { Strings, t } from '../../config/strings'
 import {
   ALLOWED_PROVIDERS,
+  SECURE_PROVIDERS,
+  SPLIT_PAYOUT_PROVIDER,
   ZEC_SHIELDED_IDENTIFIER,
   ZEC_SHIELDED_PROVIDERS,
   ZEC_TRANSPARENT_IDENTIFIER
 } from '../../config/assets'
 import { Asset, Attachment, QuoteRoute, RateResponse, SwapContext, SwapSessionData } from '../../types/context'
 import { zecAddressKind } from '../../utils/addressValidator'
+import { getProvidersForPair } from '../../db/tokens'
 import { fetchRate } from '../../utils/api'
 
 export function cancelButtonRow(S: Strings) {
@@ -31,7 +34,11 @@ export const providerTitles: Record<string, string> = {
   CCE: 'CCE Cash',
   PEGASUS: 'PegasusSwap',
   LIZEX: 'Lizex',
-  BITANIA: 'Bitania'
+  BITANIA: 'Bitania',
+  // The `advanced` rail is REQUESTED, never guaranteed — 1Click may serve it as basic —
+  // so both read as "confidential" and differ only by what settlement they ask for.
+  NEAR_CONFIDENTIAL: 'NEAR Confidential',
+  NEAR_CONFIDENTIAL_ADVANCED: 'NEAR Confidential+'
 }
 
 export function providerName(id: string): string {
@@ -49,7 +56,9 @@ const providerRisk: Record<string, string> = {
   CCE: 'AML',
   PEGASUS: 'AML',
   LIZEX: 'AML',
-  BITANIA: 'AML'
+  BITANIA: 'AML',
+  NEAR_CONFIDENTIAL: 'Private 🔒',
+  NEAR_CONFIDENTIAL_ADVANCED: 'Private, split payout 🔒'
 }
 
 export function providerLabel(id: string): string {
@@ -58,16 +67,47 @@ export function providerLabel(id: string): string {
   return risk ? `${name} · ${risk}` : name
 }
 
+// --- Secure (confidential) swaps ---
+
+/**
+ * The provider allowlist a session quotes from. A secure swap asks the confidential rails
+ * ALONE and a standard one everything else — the two lists are disjoint, so neither mode
+ * can leak a route from the other into the list the user picks from.
+ */
+export function allowedProviders(secure?: boolean): string[] {
+  return secure ? SECURE_PROVIDERS : ALLOWED_PROVIDERS
+}
+
+/** The providers that can serve this pair in the session's mode, in one call. */
+export function pairProviders(identifierIn: string, identifierOut: string, secure?: boolean): string[] {
+  const allowed = allowedProviders(secure)
+  return getProvidersForPair(identifierIn, identifierOut).filter(p => allowed.includes(p))
+}
+
+/** A route that settles as several delayed transfers instead of one (see SPLIT_PAYOUT_PROVIDER). */
+export function isSplitPayoutRoute(route: QuoteRoute | undefined): boolean {
+  return route?.providers[0] === SPLIT_PAYOUT_PROVIDER
+}
+
+/** The secure-swap toggle, shown on the screens where switching mode is still free. */
+export function secureRow(S: Strings, secure?: boolean) {
+  return [Markup.button.callback(secure ? S.secureOn : S.secureOff, 'toggle_secure')]
+}
+
 // --- Zcash: shielded vs transparent ---
 
 export function isZecIdentifier(identifier: string | undefined): boolean {
   return identifier?.split('.')[0] === 'ZEC'
 }
 
-/** Shielded-capable providers that are actually offerable — the rest of the list is documentation. */
-export function zecShieldedProviders(buyAssetIdentifier: string): string[] {
+/**
+ * Shielded-capable providers that are actually offerable — the rest of the list is
+ * documentation. None of them is confidential, so a secure swap has no shielded leg.
+ */
+export function zecShieldedProviders(buyAssetIdentifier: string, secure?: boolean): string[] {
   if (buyAssetIdentifier !== ZEC_TRANSPARENT_IDENTIFIER) return []
-  return ZEC_SHIELDED_PROVIDERS.filter(p => ALLOWED_PROVIDERS.includes(p))
+  const allowed = allowedProviders(secure)
+  return ZEC_SHIELDED_PROVIDERS.filter(p => allowed.includes(p))
 }
 
 /**
@@ -85,13 +125,15 @@ export async function fetchPairRates(params: {
   buyAsset: string
   sellAmount: string
   providers: string[]
+  secure?: boolean
 }): Promise<RateResponse> {
-  const shielded = zecShieldedProviders(params.buyAsset)
-  if (shielded.length === 0) return fetchRate(params)
+  const { secure, ...rateParams } = params
+  const shielded = zecShieldedProviders(params.buyAsset, secure)
+  if (shielded.length === 0) return fetchRate(rateParams)
 
   const [transparentRates, shieldedRates] = await Promise.all([
-    params.providers.length > 0 ? fetchRate(params) : Promise.resolve(emptyRateResponse()),
-    fetchRate({ ...params, buyAsset: ZEC_SHIELDED_IDENTIFIER, providers: shielded }).catch(error => {
+    params.providers.length > 0 ? fetchRate(rateParams) : Promise.resolve(emptyRateResponse()),
+    fetchRate({ ...rateParams, buyAsset: ZEC_SHIELDED_IDENTIFIER, providers: shielded }).catch(error => {
       console.error('[Swap] Shielded ZEC quote failed:', error)
       return emptyRateResponse()
     })
@@ -172,7 +214,13 @@ export function assetCaption(asset: Asset) {
   return `${asset.ticker}-${label}`
 }
 
-export function assetKeyboard(assets: Asset[], S: Strings, disabledIdentifier?: string, showBack: boolean = false) {
+export function assetKeyboard(
+  assets: Asset[],
+  S: Strings,
+  disabledIdentifier?: string,
+  showBack: boolean = false,
+  secure?: boolean
+) {
   const buttons = assets.map(a => {
     if (a.identifier === disabledIdentifier) {
       return Markup.button.callback(`✓ ${assetCaption(a)}`, 'disabled')
@@ -185,11 +233,12 @@ export function assetKeyboard(assets: Asset[], S: Strings, disabledIdentifier?: 
     rows.push(buttons.slice(i, i + 2))
   }
 
+  rows.push(secureRow(S, secure))
   rows.push(showBack ? backCancelRow(S) : cancelButtonRow(S))
   return Markup.inlineKeyboard(rows)
 }
 
-export function searchResultsKeyboard(assets: Asset[], S: Strings, disabledIdentifier?: string) {
+export function searchResultsKeyboard(assets: Asset[], S: Strings, disabledIdentifier?: string, secure?: boolean) {
   const buttons = assets.map((a, i) => {
     if (a.identifier === disabledIdentifier) {
       return Markup.button.callback(`✓ ${assetCaption(a)}`, 'disabled')
@@ -202,6 +251,7 @@ export function searchResultsKeyboard(assets: Asset[], S: Strings, disabledIdent
     rows.push(buttons.slice(i, i + 2))
   }
 
+  rows.push(secureRow(S, secure))
   rows.push(clearSearchCancelRow(S))
   return Markup.inlineKeyboard(rows)
 }
@@ -281,6 +331,8 @@ export function formatTime(seconds: number): string {
 
 export function buildProgress(session: SwapSessionData, S: Strings): string {
   const lines: string[] = []
+  // Which rail the quotes came from changes what the numbers mean, so it leads the block.
+  if (session.secure) lines.push(S.progressSecure)
   if (session.assetIn && session.assetOut) {
     lines.push(t(S.progressSend, { asset: `${assetCaption(session.assetIn)} → ${assetCaption(session.assetOut)}` }))
   } else {

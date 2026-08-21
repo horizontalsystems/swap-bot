@@ -141,6 +141,8 @@ export interface SwapSessionData extends Scenes.WizardSessionData {
   routes?: QuoteRoute[]
   quote?: QuoteRoute
   searchResults?: Asset[]
+  /** Secure swap: quote the confidential rails alone (see SECURE_PROVIDERS). */
+  secure?: boolean
 }
 
 export interface SwapContext extends Context {

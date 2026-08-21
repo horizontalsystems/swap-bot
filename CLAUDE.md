@@ -85,9 +85,10 @@ minimum) into the `{minLine}` row, so never present a null as a guarantee.
 unrecoverable, so all three scenes surface it separately from the address. `execution.qr` is optional; when the
 server can't encode a chain, the flow continues without the image.
 
-Provider selection: intersection of both assets' `providers` arrays (`getProvidersForPair`), filtered by
-`ALLOWED_PROVIDERS` in `config/assets.ts`. `THORCHAIN` is additionally dropped unless **both** assets are in the
-memoless-assets table.
+Provider selection: intersection of both assets' `providers` arrays (`getProvidersForPair`), filtered by the
+session's allowlist — `pairProviders()` in `scenes/swap/helpers.ts` is the one call that does both, and no scene
+should reach for `getProvidersForPair` directly. `THORCHAIN` is additionally dropped unless **both** assets are
+in the memoless-assets table.
 
 THORChain routes carry a `memo` that a chat user cannot attach to a transfer, so they go through the separate
 memoless API (`utils/memoless-api.ts`, `https://swap.unstoppable.money/memoless/api/v1`, no API key):
@@ -102,6 +103,34 @@ providers in `AML_PRECHECK_PROVIDERS`, and never blocks on an inconclusive resul
 
 A commit that fails does **not** end the flow: every scene re-quotes and hands the route list back (Telegram
 returns to wizard step 4), because a refusal is usually the one committed provider's, not the pair's.
+
+### Secure swap is a second, disjoint provider list
+
+`session.secure` picks which allowlist `allowedProviders()` hands back: `SECURE_PROVIDERS` or
+`ALLOWED_PROVIDERS` (everything else). The two lists **must stay disjoint**: that is what keeps a standard swap
+from silently pricing a privacy rail and a secure swap from showing a public route beside a confidential one.
+Confidential providers execute as a plain `transfer`, so nothing downstream of the route list changes.
+
+`SECURE_PROVIDERS` holds **only `privacy: "basic"` rails** — today just `NEAR_CONFIDENTIAL`, the NEAR/1Click
+rail run with confidentiality on, settling as one matched payout. `GET /v2/providers` grades every provider
+`none | basic | split`; the `split` rail `NEAR_CONFIDENTIAL_ADVANCED` is deliberately held back, so a secure
+swap always pays out in a single transfer.
+
+The aggregator also models this as a request field (`privacy: exclude | only | include` on `/rate`), but an
+explicit `providers` list overrides it and every scene already sends one — so the bot never sets `privacy`.
+
+Consequences worth knowing: the confidential catalog is thinner (no XMR), so a pair with standard routes may
+have **no** secure route — hence `noProvidersSecure`, which says to turn the mode off rather than dead-ending.
+No confidential provider pays shielded ZEC, so `zecShieldedProviders()` returns nothing in secure mode and the
+shielded leg of `fetchPairRates` is skipped. And `SPLIT_PAYOUT_PROVIDER` / `isSplitPayoutRoute` /
+`splitPayoutNote` are live but **dormant**: they put a warning on the summary and the confirmation of a route
+that settles as several delayed transfers, which nothing currently quotes — re-listing
+`NEAR_CONFIDENTIAL_ADVANCED` in `SECURE_PROVIDERS` is all it takes to make them fire again.
+
+The toggle is offered up to and including the route list, and never after a route is picked (the quote is bound
+to one provider by then): Telegram is a `toggle_secure` button row on the asset, amount and route screens
+(`secureRow`, handled per `ctx.wizard.cursor`); SimpleX and Signal take `p` (Signal also `secure`/`private`),
+which re-renders the current step and re-quotes at `SELECT_ROUTE`.
 
 ### SQLite is a disposable cache
 
