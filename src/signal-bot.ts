@@ -34,15 +34,15 @@ function handleReceive(params: SignalReceiveParams): void {
   // Reply target: prefer the phone number, fall back to UUID.
   const sender = env.sourceNumber || env.source || env.sourceUuid
   if (!sender) {
-    console.error('[Signal] Received message with no identifiable sender:', JSON.stringify(env))
+    console.error('[Signal] Received message with no identifiable sender')
     return
   }
 
   const senderName = env.sourceName ? `${env.sourceName} (${sender})` : sender
-  console.log(`[Signal] Message from ${senderName}: ${text}`)
+  console.log('[Signal] Message received')
 
   handleSwapMessage(client, sender, text).catch(err => {
-    console.error(`[Signal] Error handling message from ${senderName}:`, err)
+    console.error('[Signal] Message handling failed:', err instanceof Error ? err.name : 'UnknownError')
   })
 }
 
@@ -77,7 +77,7 @@ async function main(): Promise<void> {
   })
 
   await client.connect()
-  console.log(`[Signal] Connected. Bot account: ${SIGNAL_ACCOUNT}`)
+  console.log('[Signal] Connected. Bot account configured')
 
   cleanupTimer = setInterval(cleanupSessions, CLEANUP_INTERVAL_MS)
   console.log('[Signal] Bot is running!')

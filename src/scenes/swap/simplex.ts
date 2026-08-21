@@ -2,6 +2,7 @@ import { ChatClient } from 'simplex-chat'
 import { T } from '@simplex-chat/types'
 import { FEATURED_IDENTIFIERS } from '../../config/assets'
 import { s, t } from '../../config/strings'
+import { resolveAssetInput } from './asset-input'
 import { getAssets, searchAssets } from '../../db/tokens'
 import { Asset, Attachment, QuoteRoute, SwapSessionData } from '../../types/context'
 import { getAssetPrice, getSwapPrices } from '../../services/prices'
@@ -326,9 +327,9 @@ async function handleSelectSendAsset(
   session: SimplexSwapSession,
   input: string
 ): Promise<void> {
-  const num = parseInt(input, 10)
-  if (!isNaN(num) && num >= 1 && session.menuItems && num <= session.menuItems.length) {
-    const asset = session.menuItems[num - 1]
+  const resolution = resolveAssetInput(input, session.menuItems ?? [], searchAssets)
+  if (resolution.type === 'selected') {
+    const asset = resolution.asset
     session.assetIn = asset
     session.menuItems = undefined
     if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
@@ -337,11 +338,10 @@ async function handleSelectSendAsset(
     return
   }
 
-  if (input.length >= 2) {
-    const results = searchAssets(input)
-    if (results.length > 0) {
-      session.menuItems = results
-      await send(client, contactId, S.selectSendAsset + '\n\n' + assetList(results) + hint('r', 'c'))
+  if (resolution.type === 'search') {
+    if (resolution.results.length > 0) {
+      session.menuItems = resolution.results
+      await send(client, contactId, S.selectSendAsset + '\n\n' + assetList(resolution.results) + hint('r', 'c'))
     } else {
       await send(client, contactId, 'No assets found. Try a different search.' + hint('r', 'b'))
     }
@@ -357,9 +357,9 @@ async function handleSelectRecvAsset(
   session: SimplexSwapSession,
   input: string
 ): Promise<void> {
-  const num = parseInt(input, 10)
-  if (!isNaN(num) && num >= 1 && session.menuItems && num <= session.menuItems.length) {
-    const asset = session.menuItems[num - 1]
+  const resolution = resolveAssetInput(input, session.menuItems ?? [], searchAssets)
+  if (resolution.type === 'selected') {
+    const asset = resolution.asset
 
     if (asset.identifier === session.assetIn?.identifier) {
       await send(client, contactId, 'Already selected as send asset. Choose a different one.')
@@ -379,7 +379,6 @@ async function handleSelectRecvAsset(
         contactId,
         t(secure ? S.noProvidersSecure : S.noProviders, { progress: progress(session) }) + hint('b', 'c', 'p')
       )
-      // Stay at ENTER_AMOUNT so "b" returns to SELECT_RECV_ASSET
       session.step = SwapStep.ENTER_AMOUNT
       return
     }
@@ -389,16 +388,15 @@ async function handleSelectRecvAsset(
     return
   }
 
-  if (input.length >= 2) {
-    const results = searchAssets(input)
-    if (results.length > 0) {
-      session.menuItems = results
+  if (resolution.type === 'search') {
+    if (resolution.results.length > 0) {
+      session.menuItems = resolution.results
       await send(
         client,
         contactId,
         t(S.selectReceiveAsset, { progress: progress(session) }) +
           '\n\n' +
-          assetList(results, session.assetIn?.identifier) +
+          assetList(resolution.results, session.assetIn?.identifier) +
           hint('r', 'b')
       )
     } else {

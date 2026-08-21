@@ -1,8 +1,6 @@
-import fs from 'fs'
-import os from 'os'
-import path from 'path'
 import { FEATURED_IDENTIFIERS } from '../../config/assets'
 import { s, t } from '../../config/strings'
+import { resolveAssetInput } from './asset-input'
 import { getAssets, searchAssets } from '../../db/tokens'
 import { Asset, Attachment, QuoteRoute, SwapSessionData } from '../../types/context'
 import { getAssetPrice, getSwapPrices } from '../../services/prices'
@@ -10,6 +8,7 @@ import { amlFlaggedAddress, fetchSwap } from '../../utils/api'
 import { preflightMemoless, registerMemoless } from '../../utils/memoless-api'
 import { validateAddress } from '../../utils/addressValidator'
 import { SignalRpcClient } from '../../utils/signal-rpc'
+import { normalizeImageDataUri } from '../../utils/image-data-uri'
 import {
   AmountFormatter,
   assetCaption,
@@ -113,7 +112,7 @@ async function send(client: SignalRpcClient, recipient: string, text: string): P
   try {
     await client.sendMessage(recipient, toPlainText(text))
   } catch (err) {
-    console.error(`[Signal] Failed to send message to ${recipient}:`, err)
+    console.error('[Signal] Failed to send message:', err instanceof Error ? err.name : 'UnknownError')
   }
 }
 
@@ -123,19 +122,14 @@ async function sendImage(
   base64Image: string,
   caption: string
 ): Promise<void> {
-  let filePath: string | undefined
   try {
-    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '')
-    filePath = path.join(os.tmpdir(), `swap-qr-${recipient.replace(/[^\w+]/g, '')}-${process.hrtime.bigint()}.png`)
-    await fs.promises.writeFile(filePath, Buffer.from(base64Data, 'base64'))
-    await client.sendMessage(recipient, toPlainText(caption), [filePath])
+    // signal-cli accepts RFC 2397 data URIs directly. This preserves the provider's
+    // real MIME type and avoids temporary-file format/cleanup failures.
+    const attachment = normalizeImageDataUri(base64Image)
+    await client.sendMessage(recipient, toPlainText(caption), [attachment])
   } catch (err) {
-    console.error(`[Signal] Failed to send image to ${recipient}:`, err)
+    console.error('[Signal] Failed to send image:', err instanceof Error ? err.name : 'UnknownError')
     if (caption) await send(client, recipient, caption)
-  } finally {
-    if (filePath) {
-      fs.promises.unlink(filePath).catch(() => {})
-    }
   }
 }
 
@@ -385,9 +379,9 @@ async function handleSelectSendAsset(
   session: SignalSwapSession,
   input: string
 ): Promise<void> {
-  const num = parseInt(input, 10)
-  if (!isNaN(num) && num >= 1 && session.menuItems && num <= session.menuItems.length) {
-    const asset = session.menuItems[num - 1]
+  const resolution = resolveAssetInput(input, session.menuItems ?? [], searchAssets)
+  if (resolution.type === 'selected') {
+    const asset = resolution.asset
     session.assetIn = asset
     session.menuItems = undefined
     if (asset.coingeckoId) getAssetPrice(asset.coingeckoId)
@@ -396,11 +390,10 @@ async function handleSelectSendAsset(
     return
   }
 
-  if (input.length >= 2) {
-    const results = searchAssets(input)
-    if (results.length > 0) {
-      session.menuItems = results
-      await send(client, recipient, S.selectSendAsset + '\n\n' + assetList(results) + hint('r', 'c'))
+  if (resolution.type === 'search') {
+    if (resolution.results.length > 0) {
+      session.menuItems = resolution.results
+      await send(client, recipient, S.selectSendAsset + '\n\n' + assetList(resolution.results) + hint('r', 'c'))
     } else {
       await send(client, recipient, 'No assets found. Try a different search.' + hint('r', 'b'))
     }
@@ -416,9 +409,9 @@ async function handleSelectRecvAsset(
   session: SignalSwapSession,
   input: string
 ): Promise<void> {
-  const num = parseInt(input, 10)
-  if (!isNaN(num) && num >= 1 && session.menuItems && num <= session.menuItems.length) {
-    const asset = session.menuItems[num - 1]
+  const resolution = resolveAssetInput(input, session.menuItems ?? [], searchAssets)
+  if (resolution.type === 'selected') {
+    const asset = resolution.asset
 
     if (asset.identifier === session.assetIn?.identifier) {
       await send(client, recipient, 'Already selected as send asset. Choose a different one.')
@@ -438,7 +431,6 @@ async function handleSelectRecvAsset(
         recipient,
         t(secure ? S.noProvidersSecure : S.noProviders, { progress: progress(session) }) + hint('b', 'c', 'p')
       )
-      // Stay at ENTER_AMOUNT so "b" returns to SELECT_RECV_ASSET
       session.step = SwapStep.ENTER_AMOUNT
       return
     }
@@ -448,16 +440,15 @@ async function handleSelectRecvAsset(
     return
   }
 
-  if (input.length >= 2) {
-    const results = searchAssets(input)
-    if (results.length > 0) {
-      session.menuItems = results
+  if (resolution.type === 'search') {
+    if (resolution.results.length > 0) {
+      session.menuItems = resolution.results
       await send(
         client,
         recipient,
         t(S.selectReceiveAsset, { progress: progress(session) }) +
           '\n\n' +
-          assetList(results, session.assetIn?.identifier) +
+          assetList(resolution.results, session.assetIn?.identifier) +
           hint('r', 'b')
       )
     } else {
@@ -510,7 +501,7 @@ async function handleEnterAmount(
     session.step = SwapStep.SELECT_ROUTE
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[Swap] Quote error:', error)
+    console.error('[Swap] Quote failed:', error instanceof Error ? error.name : 'UnknownError')
     await send(client, recipient, t(S.quoteError, { progress: progress(session), error: errMsg }))
     sessions.delete(recipient)
   }
@@ -717,7 +708,7 @@ async function executeSwap(client: SignalRpcClient, recipient: string, session: 
       sendAmountRaw = registerData.suggested_in_asset_amount
       expiresIn = preflightData.data.seconds_remaining
       paymentUri = preflightData.data.qr_code
-      console.log('[Swap] Memoless flow complete — inbound:', inboundAddr, 'sendAmount:', sendAmount)
+      console.log('[Swap] Memoless flow completed')
     } else {
       const deposit = depositInstructions(route)
       if (!deposit) {
@@ -798,7 +789,6 @@ async function executeSwap(client: SignalRpcClient, recipient: string, session: 
     sessions.delete(recipient)
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[Swap] Confirm error:', error)
     await send(client, recipient, t(S.swapConfirmError, { error: errMsg }) + `\n\n${S.chooseAnotherProvider}`)
 
     // The commit goes to one provider, and a refusal is usually that provider's alone — a
@@ -858,7 +848,7 @@ async function handleBack(client: SignalRpcClient, recipient: string, session: S
         await fetchAndShowRoutes(client, recipient, session)
       } catch (error) {
         const errMsg = error instanceof Error ? error.message : 'Unknown error'
-        console.error('[Swap] Quote error:', error)
+        console.error('[Swap] Quote failed:', error instanceof Error ? error.name : 'UnknownError')
         await send(client, recipient, t(S.quoteError, { progress: progress(session), error: errMsg }))
         sessions.delete(recipient)
       }
@@ -1034,7 +1024,7 @@ export function cleanupSessions(): void {
   for (const [recipient, session] of sessions) {
     if (now - session.lastActivity > SESSION_TIMEOUT_MS) {
       sessions.delete(recipient)
-      console.log(`[Signal] Session expired for ${recipient}`)
+      console.log('[Signal] Session expired')
     }
   }
 }

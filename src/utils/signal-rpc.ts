@@ -105,7 +105,7 @@ export class SignalRpcClient extends EventEmitter {
       try {
         msg = JSON.parse(line)
       } catch {
-        console.error('[Signal] Failed to parse JSON-RPC line:', line)
+        console.error('[Signal] Failed to parse JSON-RPC message')
         continue
       }
       this.handleMessage(msg)
