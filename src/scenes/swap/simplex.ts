@@ -120,7 +120,9 @@ const PROVIDER_RISK: Record<string, string> = {
   NEAR: 'AML, External Liq',
   EXOLIX: 'AML, External Liq',
   CCE: 'AML, External Liq',
-  PEGASUS: 'AML, External Liq'
+  PEGASUS: 'AML, External Liq',
+  LIZEX: 'AML, External Liq',
+  BITANIA: 'AML, External Liq'
 }
 
 function simplexProviderLabel(id: string): string {

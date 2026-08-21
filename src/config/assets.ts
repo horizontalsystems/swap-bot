@@ -21,7 +21,9 @@ export const ALLOWED_PROVIDERS: string[] = [
   'SWAPUZ',
   'EXOLIX',
   'CCE',
-  'PEGASUS'
+  'PEGASUS',
+  'LIZEX',
+  'BITANIA'
 ]
 
 /**
