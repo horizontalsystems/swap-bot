@@ -9,6 +9,7 @@ import { preflightMemoless, registerMemoless } from '../../utils/memoless-api'
 import { validateAddress } from '../../utils/addressValidator'
 import { SignalRpcClient } from '../../utils/signal-rpc'
 import { normalizeImageDataUri } from '../../utils/image-data-uri'
+import { splitLongMessage } from '../../utils/send-long-message'
 import {
   AmountFormatter,
   assetCaption,
@@ -963,7 +964,9 @@ export async function handleSwapMessage(client: SignalRpcClient, recipient: stri
   }
 
   if (cmd === 'f') {
-    await send(client, recipient, S.faq + '\n\n' + COMMANDS_HELP)
+    for (const part of splitLongMessage(S.faq + '\n\n' + COMMANDS_HELP, 2800)) {
+      await send(client, recipient, part)
+    }
     return
   }
 

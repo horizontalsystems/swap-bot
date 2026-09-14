@@ -5,6 +5,7 @@ import { swapWizard } from './scenes/swap'
 import { startPeriodicSync, stopPeriodicSync, syncTokensAtStartup } from './services/token-sync'
 import { closeDb } from './db/database'
 import { s } from './config/strings'
+import { splitLongMessage } from './utils/send-long-message'
 import { useApiKeyFor } from './utils/api'
 
 dotenv.config()
@@ -37,7 +38,9 @@ bot.command('swap', ctx => ctx.scene.enter('swap-wizard'))
 bot.command('faq', async ctx => {
   const S = s(ctx.from?.language_code)
   await ctx.scene.leave()
-  ctx.reply(S.faq, { parse_mode: 'Markdown' })
+  for (const part of splitLongMessage(S.faq, 3500)) {
+    await ctx.reply(part, { parse_mode: 'Markdown' })
+  }
 })
 
 bot.command('cancel', ctx => {

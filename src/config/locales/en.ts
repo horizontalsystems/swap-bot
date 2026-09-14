@@ -165,31 +165,176 @@ export const en = {
 
   // --- FAQ ---
   faq:
-    '❓ *FAQ*\n\n' +
-    '*What is this bot?*\n\n' +
-    'A crypto-to-crypto swap bot inside Telegram.\n\n' +
-    'Choose what you want to send and receive, compare quotes from multiple providers, and complete the swap without connecting a wallet.\n\n' +
-    '*Which providers are supported?*\n\n' +
-    'The bot aggregates both decentralized and centralized providers. Available providers depend on the asset pair.\n\n' +
-    '*Can providers freeze assets?*\n\n' +
-    'It depends on the provider type.\n\n' +
-    'DEX protocols cannot freeze funds. The swap either executes or fails (funds are refunded automatically).\n\n' +
-    'Private-liquity providers operate using their own liquidity. Freezes are very and very unlikely but counterparty risk still exists.\n\n' +
-    'Majority of sources that operate with third party liquidity have AML policies. In most cases swaps are rejected and refunded if any AML issues are detected. In rare situations a provider may request KYC before releasing funds.\n\n' +
-    'Risk level is shown next to each provider before you choose.\n\n' +
-    '*Do you hold my funds?*\n\n' +
-    'No. Unstoppable Swap Bot never custody funds. Swaps are executed directly by third-party providers.\n\n' +
-    'The bot only requests quotes, shows options and provides transaction instructions. Funds move directly between you and the provider.\n\n' +
-    '*What is a refund address?*\n\n' +
-    'A refund address is where funds are returned if a swap fails. Some providers require it as a safety measure.\n\n' +
-    'THORChain DEX swaps do not require a refund address.\n\n' +
-    '*What does "Send exact amount" mean?*\n\n' +
-    'Some providers (especially THORChain) require the precise amount shown. Sending more or less may cause: swap failure, delays or loss of funds. Always send the exact amount displayed.\n\n' +
-    '*What is a secure swap?*\n\n' +
-    'A secure swap is executed on a confidential rail: the payout cannot be linked on-chain to your deposit.\n\n' +
-    'Turn it on before requesting quotes and only confidential routes are offered. Fewer assets are supported than in a standard swap, the rate is usually slightly lower and settlement takes a little longer.\n\n' +
-    '*How do I track my swap?*\n\n' +
-    'After confirmation, the bot provides a Track Swap link. You can monitor: swap progress and execution status.\n\n' +
-    '*Can I cancel a swap?*\n\n' +
-    'You can cancel anytime before confirmation step. After the funds are sent to the deposit address, swaps cannot be reversed through the bot.'
+    '# Unstoppable Swap Bot FAQ\n' +
+    '\n' +
+    '**What is this bot?**\n' +
+    '\n' +
+    'Unstoppable is a multi-platform crypto-to-crypto swap bot.\n' +
+    '\n' +
+    'Choose what you want to send and receive, compare quotes from multiple providers, and select the best option based on price, speed, risk, and privacy.\n' +
+    '\n' +
+    'You do not need to connect a wallet.\n' +
+    '\n' +
+    '**Which providers are supported?**\n' +
+    '\n' +
+    'The bot compares quotes from decentralized exchanges, instant exchange services, and DEX aggregation engines.\n' +
+    '\n' +
+    'Nearly all major liquidity sources are supported. Available quotes depend on the selected assets, networks, amount, and current liquidity.\n' +
+    '\n' +
+    '**How are quotes ranked?**\n' +
+    '\n' +
+    'Quotes are ranked using more than the advertised exchange rate.\n' +
+    '\n' +
+    'The bot also considers provider risk, expected execution results, and how much each provider has historically delivered compared with what it promised.\n' +
+    '\n' +
+    'This helps surface the quote that is most likely to produce the best actual result—not simply the most attractive advertised rate.\n' +
+    '\n' +
+    '**What is price correction?**\n' +
+    '\n' +
+    'Some providers regularly deliver slightly less than their original quote because of slippage, fees, or inaccurate estimates.\n' +
+    '\n' +
+    'Unstoppable tracks this behavior. If a provider regularly delivers less than promised, its quote is corrected downward before being placed in the rankings.\n' +
+    '\n' +
+    'This makes the amount shown before the swap more realistic. As a result, more than 60% of users receive even more than the amount displayed before their swap.\n' +
+    '\n' +
+    '**How does Unstoppable reduce the risk of frozen funds?**\n' +
+    '\n' +
+    'Every provider has a carefully defined risk profile. Its risk score is shown with the quote before you select a route.\n' +
+    '\n' +
+    'Pay close attention to this score when choosing a provider. A better rate may come with a higher risk of AML review, delays, KYC requests, or frozen funds.\n' +
+    '\n' +
+    'For some providers, Unstoppable can also estimate whether the provider is likely to have concerns about the funds before you create and fund the swap order.\n' +
+    '\n' +
+    'Unstoppable is designed to minimize the risk of freezes at every stage. However, when you choose a centralized provider, the possibility of a freeze or manual review cannot be eliminated completely.\n' +
+    '\n' +
+    'Only fully decentralized routes execute solely according to protocol rules rather than at the discretion of a centralized provider. These checks significantly reduce risk, but they cannot guarantee that every provider will accept a transaction.\n' +
+    '\n' +
+    '**Can providers freeze assets?**\n' +
+    '\n' +
+    'It depends on the route and provider.\n' +
+    '\n' +
+    'DEX swaps normally execute or fail according to their smart-contract rules and are not subject to manual review by an exchange operator.\n' +
+    '\n' +
+    'However, DEX aggregators and intent-based systems may involve routers, solvers, relayers, bridges, or other components. The ability to pause or restrict a transaction depends on the specific route.\n' +
+    '\n' +
+    'Instant exchanges and private-liquidity providers operate according to their own policies. They may reject and refund a swap following AML screening. Each provider is different.\n' +
+    '\n' +
+    'In our experience, providers operating with their own private liquidity tend to be more permissive than providers relying on external liquidity sources. In rare cases, a provider may hold funds for review or request KYC before completing or refunding a swap.\n' +
+    '\n' +
+    'Always check the provider’s risk score before making your selection.\n' +
+    '\n' +
+    '**How private is my swap?**\n' +
+    '\n' +
+    'Privacy depends on the route you select.\n' +
+    '\n' +
+    'A DEX swap is normally public. Wallet addresses, amounts, timing, and swap execution can be visible on the blockchain.\n' +
+    '\n' +
+    'An instant exchange creates no direct public transaction between the asset you send and the asset you receive. However, the provider knows which deposit funded which payout. Blockchain analytics may also estimate the connection using amounts, timing, and known provider addresses.\n' +
+    '\n' +
+    'A standard NEAR swap does not use confidential execution. Its entry, settlement, and output activity may be publicly observable or correlated.\n' +
+    '\n' +
+    'A NEAR confidential swap hides the internal swap execution. However, the deposit and withdrawal remain visible on their respective blockchains and may still be associated.\n' +
+    '\n' +
+    'No route guarantees anonymity.\n' +
+    '\n' +
+    '**How does a DEX swap affect my privacy?**\n' +
+    '\n' +
+    'A DEX swap is executed using public blockchain transactions and smart contracts.\n' +
+    '\n' +
+    'The wallet addresses, assets, amounts, timing, and transaction path may be visible to anyone. DEX routes can be fast and non-custodial, but they generally provide the least protection from blockchain analysis.\n' +
+    '\n' +
+    '**How does an instant exchange affect my privacy?**\n' +
+    '\n' +
+    'With an instant exchange, you send one asset to an address provided by the service. The service then sends the requested asset to your destination address.\n' +
+    '\n' +
+    'There is normally no direct public transaction connecting the two blockchains. However, the provider knows exactly which deposit funded which payout.\n' +
+    '\n' +
+    'Blockchain analytics may also estimate the connection using transaction amounts, timing, exchange rates, and known service addresses.\n' +
+    '\n' +
+    '**Does no KYC mean anonymous?**\n' +
+    '\n' +
+    'No.\n' +
+    '\n' +
+    'No KYC means that the provider does not normally require formal identity verification. It does not mean that the swap is invisible, unrecorded, or impossible to analyze.\n' +
+    '\n' +
+    'A no-KYC provider may still perform AML screening and request information in exceptional cases.\n' +
+    '\n' +
+    '**What is a NEAR standard swap?**\n' +
+    '\n' +
+    'A NEAR standard swap uses NEAR’s intent and solver infrastructure to find and execute a quote.\n' +
+    '\n' +
+    'It does not use confidential execution. Transactions entering and leaving the route remain visible, and their settlement activity may be publicly observable or correlated.\n' +
+    '\n' +
+    'For privacy purposes, a standard NEAR swap should be treated as publicly observable.\n' +
+    '\n' +
+    '**What is a NEAR confidential swap?**\n' +
+    '\n' +
+    'A NEAR confidential swap executes the internal part of the swap inside NEAR’s confidential environment.\n' +
+    '\n' +
+    'The currently available Basic mode hides the internal swap execution, but it does not hide the public deposit and withdrawal.\n' +
+    '\n' +
+    'For example, if $1,000 of BTC enters and approximately $1,000 of ETH leaves soon afterward, blockchain analytics may estimate that the transactions are related.\n' +
+    '\n' +
+    'Confidential mode improves privacy, but it does not make the swap invisible or guarantee anonymity.\n' +
+    '\n' +
+    '**How is a confidential swap different from an instant exchange?**\n' +
+    '\n' +
+    'Both routes can remove a direct public connection between the asset you send and the asset you receive.\n' +
+    '\n' +
+    'With an instant exchange, the provider knows exactly which deposit funded which payout. Your privacy depends partly on how the provider stores and protects that information.\n' +
+    '\n' +
+    'A NEAR confidential swap hides the internal execution using confidential infrastructure instead of relying only on an exchange provider’s privacy practices.\n' +
+    '\n' +
+    'However, Basic confidential mode still exposes the public deposit and withdrawal. Blockchain observers may associate them using amounts, timing, and wallet activity.\n' +
+    '\n' +
+    '**Should I enable confidential mode?**\n' +
+    '\n' +
+    'Consider enabling it if you want the internal swap execution hidden from public view and more privacy than a standard on-chain swap.\n' +
+    '\n' +
+    'It does not guarantee anonymity or prevent all blockchain analysis. Confidential mode may also have a different exchange rate, fee, or settlement time.\n' +
+    '\n' +
+    '**Do you collect or share user data?**\n' +
+    '\n' +
+    'Unstoppable does not ask for your name, email address, phone number, or identity documents.\n' +
+    '\n' +
+    'We do not pass user metadata—such as your IP address or platform identifiers—to swap providers or other liquidity sources. Providers receive only the transaction information required to execute the selected swap.\n' +
+    '\n' +
+    'Any technical metadata temporarily processed by Unstoppable is automatically deleted every 24 hours.\n' +
+    '\n' +
+    'The platform you use to access the bot may process information according to its own privacy policy.\n' +
+    '\n' +
+    '**Do you hold my funds?**\n' +
+    '\n' +
+    'No. Unstoppable never takes custody of your funds.\n' +
+    '\n' +
+    'Depending on the route, funds may temporarily pass through a smart contract, bridge, solver, or third-party provider while the swap is executed.\n' +
+    '\n' +
+    'Unstoppable only requests quotes, displays the available options, and provides transaction instructions.\n' +
+    '\n' +
+    '**What is a refund address?**\n' +
+    '\n' +
+    'A refund address is where your original funds can be returned if the swap fails.\n' +
+    '\n' +
+    'Make sure the address supports the correct asset and network and is controlled by you.\n' +
+    '\n' +
+    'Some routes, including certain THORChain swaps, do not require a separate refund address.\n' +
+    '\n' +
+    '**What does “Send exact amount” mean?**\n' +
+    '\n' +
+    'Some providers require the precise amount shown in the instructions.\n' +
+    '\n' +
+    'Sending more or less may result in a failed swap, a delay, a different exchange result, or loss of funds. Always send the exact amount using the correct asset and network.\n' +
+    '\n' +
+    '**How do I track my swap?**\n' +
+    '\n' +
+    'After confirmation, the bot provides a **Track Swap** link.\n' +
+    '\n' +
+    'You can use it to monitor the swap’s progress, payout, completion, failure, or refund.\n' +
+    '\n' +
+    '**Can I cancel a swap?**\n' +
+    '\n' +
+    'You can cancel before confirming and sending funds.\n' +
+    '\n' +
+    'After funds have been sent to the deposit address, the swap cannot be cancelled or reversed through Unstoppable. If execution fails, refunds are handled according to the selected provider’s rules.'
+
 }

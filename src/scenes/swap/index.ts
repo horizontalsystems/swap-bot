@@ -2,6 +2,7 @@ import { Markup, Scenes } from 'telegraf'
 import { message } from 'telegraf/filters'
 import { FEATURED_IDENTIFIERS } from '../../config/assets'
 import { s, t } from '../../config/strings'
+import { splitLongMessage } from '../../utils/send-long-message'
 import { getAssetByIdentifier, getAssets, searchAssets } from '../../db/tokens'
 import { SwapContext } from '../../types/context'
 import { getAssetPrice, getSwapPrices } from '../../services/prices'
@@ -470,7 +471,9 @@ swapWizard.command('cancel', async ctx => {
 swapWizard.command('faq', async ctx => {
   const S = s(ctx.from?.language_code)
   await editSwapMessage(ctx, S.swapCancelled)
-  await ctx.reply(S.faq, { parse_mode: 'Markdown' })
+  for (const part of splitLongMessage(S.faq, 3500)) {
+    await ctx.reply(part, { parse_mode: 'Markdown' })
+  }
   return ctx.scene.leave()
 })
 

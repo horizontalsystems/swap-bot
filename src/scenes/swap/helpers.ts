@@ -37,8 +37,8 @@ export const providerTitles: Record<string, string> = {
   BITANIA: 'Bitania',
   // The `advanced` rail is REQUESTED, never guaranteed — 1Click may serve it as basic —
   // so both read as "confidential" and differ only by what settlement they ask for.
-  NEAR_CONFIDENTIAL: 'NEAR Confidential',
-  NEAR_CONFIDENTIAL_ADVANCED: 'NEAR Confidential+'
+  NEAR_CONFIDENTIAL: 'Near (Confidential)',
+  NEAR_CONFIDENTIAL_ADVANCED: 'Near (Confidential)+'
 }
 
 export function providerName(id: string): string {

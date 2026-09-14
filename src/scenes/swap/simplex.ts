@@ -9,6 +9,7 @@ import { getAssetPrice, getSwapPrices } from '../../services/prices'
 import { amlFlaggedAddress, fetchSwap } from '../../utils/api'
 import { preflightMemoless, registerMemoless } from '../../utils/memoless-api'
 import { validateAddress } from '../../utils/addressValidator'
+import { splitLongMessage } from '../../utils/send-long-message'
 import {
   AmountFormatter,
   assetCaption,
@@ -143,6 +144,16 @@ const HINT_LABELS: Record<string, string> = {
   f: 'f = FAQ',
   p: 'p = secure swap on/off'
 }
+
+const COMMANDS_HELP =
+  'Commands:\n\n' +
+  's = start a new swap\n' +
+  'b = back\n' +
+  'c = cancel swap\n' +
+  'r = reset search\n' +
+  'y = yes\n' +
+  'p = secure swap on/off\n' +
+  'f = FAQ'
 
 function hint(...keys: string[]): string {
   return '\n\n' + keys.map(k => HINT_LABELS[k] ?? k).join('\n')
@@ -906,7 +917,9 @@ export async function handleSwapMessage(client: ChatClient, contactId: number, t
   }
 
   if (lower === 'f') {
-    await send(client, contactId, S.faq)
+    for (const part of splitLongMessage(S.faq + '\n\n' + COMMANDS_HELP, 2800)) {
+      await send(client, contactId, part)
+    }
     return
   }
 
