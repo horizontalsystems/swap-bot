@@ -18,6 +18,39 @@ if (!token) {
 
 const bot = new Telegraf<SwapContext>(token)
 
+// Telegraf's HTTP client only gives up on a silent socket after 500s, and a wedged
+// keep-alive connection to api.telegram.org leaves getUpdates hanging with the process
+// alive and nothing in the log — the bot is deaf but looks healthy. The polling loop
+// drives every getUpdates through `bot.telegram`, so watch the calls made on it and exit
+// (pm2 restarts us with a fresh connection) once one has been in flight too long.
+// getUpdates long-polls for 50s, so a healthy call always returns well inside the limit.
+const API_STALL_MS = 120_000
+const WATCHDOG_INTERVAL_MS = 15_000
+const inFlightSince = new Map<number, number>()
+let nextCallId = 0
+
+const originalCallApi = bot.telegram.callApi.bind(bot.telegram)
+bot.telegram.callApi = (async (...args: Parameters<typeof originalCallApi>) => {
+  const id = nextCallId++
+  inFlightSince.set(id, Date.now())
+  try {
+    return await originalCallApi(...args)
+  } finally {
+    inFlightSince.delete(id)
+  }
+}) as typeof bot.telegram.callApi
+
+const watchdog = setInterval(() => {
+  const now = Date.now()
+  for (const startedAt of inFlightSince.values()) {
+    if (now - startedAt > API_STALL_MS) {
+      console.error(`[Bot] Telegram API call stalled for ${Math.round((now - startedAt) / 1000)}s, exiting for restart`)
+      process.exit(1)
+    }
+  }
+}, WATCHDOG_INTERVAL_MS)
+watchdog.unref()
+
 // Global error handler
 bot.catch((err, ctx) => {
   console.error('[Bot] Unhandled error:', err)
@@ -106,6 +139,7 @@ main().catch(err => {
 // Graceful shutdown
 function shutdown(signal: string) {
   console.log(`\n${signal} received. Shutting down...`)
+  clearInterval(watchdog)
   stopPeriodicSync()
   bot.stop(signal)
   closeDb()
