@@ -1,5 +1,8 @@
 const PRICE_API = 'https://api.blocksdecoded.com/v1/coins'
 const CACHE_TTL_MS = 300_000
+// Prices only decorate the summary with USD values, so a slow price service should
+// degrade to "no USD shown" quickly instead of stalling the swap.
+const REQUEST_TIMEOUT_MS = 10_000
 
 interface CacheEntry {
   price: number
@@ -15,7 +18,7 @@ async function fetchPrices(coingeckoIds: string[]): Promise<Map<string, number>>
   try {
     const url = `${PRICE_API}?uids=${coingeckoIds.join(',')}&fields=price`
     console.log(`[Prices] Fetching prices for: ${coingeckoIds.join(', ')}`)
-    const response = await fetch(url)
+    const response = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
     if (!response.ok) {
       console.warn(`[Prices] API returned ${response.status}`)
       return result

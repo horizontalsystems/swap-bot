@@ -1,10 +1,11 @@
 import { MemolessAssetItem } from '../types/context'
 
 const MEMOLESS_API_BASE = 'https://swap.unstoppable.money/memoless/api/v1'
+const REQUEST_TIMEOUT_MS = 30_000
 
 export async function fetchMemolessAssets(): Promise<string[]> {
   console.log('[Memoless] Fetching assets...')
-  const response = await fetch(`${MEMOLESS_API_BASE}/assets`)
+  const response = await fetch(`${MEMOLESS_API_BASE}/assets`, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
   const text = await response.text()
   console.log(`[Memoless] Assets response (${response.status}):`)
   try {
@@ -42,7 +43,8 @@ export async function registerMemoless(params: {
   const response = await fetch(`${MEMOLESS_API_BASE}/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params)
+    body: JSON.stringify(params),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   })
   const text = await response.text()
   console.log(`[Memoless] Register response (${response.status}):`)
@@ -66,7 +68,8 @@ export async function preflightMemoless(params: {
   const response = await fetch(`${MEMOLESS_API_BASE}/preflight`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params)
+    body: JSON.stringify(params),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
   })
   const text = await response.text()
   console.log(`[Memoless] Preflight response (${response.status}):`)

@@ -2,6 +2,9 @@ import { ProviderError, QuoteRoute, RateResponse, TokenListItem } from '../types
 
 const API_BASE = 'https://swap-api.unstoppable.money/v2'
 const SLIPPAGE = 1
+// `/rate` fans out across every provider, so give it room — but a request that never
+// answers must fail rather than hold the chat handler (and everything queued behind it).
+const REQUEST_TIMEOUT_MS = 30_000
 
 /**
  * Each bot runs as its own process and bills the swap API under its own key, so usage and
@@ -68,9 +71,12 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
   let response: Response
 
   try {
-    response = await fetch(url, { ...options, headers })
+    response = await fetch(url, { ...options, headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
   } catch (networkError) {
     console.error('[API] Network error:', networkError)
+    if (networkError instanceof Error && networkError.name === 'TimeoutError') {
+      throw new Error(`Network error: API did not respond within ${REQUEST_TIMEOUT_MS / 1000}s`)
+    }
     throw new Error(`Network error: ${networkError instanceof Error ? networkError.message : 'Could not reach API'}`)
   }
 
