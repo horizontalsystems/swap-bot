@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon",
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "start": "node dist/bot.js",
     "start:simplex": "node dist/simplex-bot.js",
     "start:signal": "node dist/signal-bot.js"
