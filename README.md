@@ -83,6 +83,9 @@ pm2 save               # persist the process list
 pm2 startup            # then run the command it prints, so pm2 survives reboots
 ```
 
+If the bots were started by hand under other names (e.g. `pm2 start dist/bot.js --name telegram-bot`), remove those
+first — `pm2 delete <old-name>` for each — or you will end up with two copies of every bot polling at once.
+
 Deploying an update:
 
 ```bash

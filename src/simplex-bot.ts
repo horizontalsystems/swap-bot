@@ -5,15 +5,24 @@ import { startPeriodicSync, stopPeriodicSync, syncTokensAtStartup } from './serv
 import { closeDb } from './db/database'
 import { cleanupSessions, handleSwapMessage } from './scenes/swap/simplex'
 import { useApiKeyFor } from './utils/api'
+import { StallWatchdog, startupDeadline } from './utils/stall-watchdog'
 
 dotenv.config()
 useApiKeyFor('simplex')
 
 const SIMPLEX_WS_URL = process.env.SIMPLEX_WS_URL ?? 'ws://localhost:3030'
 const CLEANUP_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
+const STARTUP_TIMEOUT_MS = 120_000
+const API_STALL_MS = 120_000
 
 let client: ChatClient
 let cleanupTimer: ReturnType<typeof setInterval> | undefined
+
+// simplex-chat resolves a command only when the agent answers it; if the socket
+// wedges (or closes with the command in flight — it never rejects pending
+// commands) the call hangs forever, and with it every reply routed through it.
+// Every api* method goes through `sendChatCmd`, so that is the one call to watch.
+const watchdog = new StallWatchdog('[SimpleX] Chat command', API_STALL_MS)
 
 // --- Event processing ---
 
@@ -59,6 +68,9 @@ async function handleContactRequest(event: CEvt.ReceivedContactRequest): Promise
 
 // --- Event loop ---
 
+// Note: on disconnect simplex-chat flips `client.connected` but never closes
+// `msgQ`, so this loop would sit in `dequeue()` forever. `main` races it against
+// `client.client`, which settles when the transport is gone.
 async function eventLoop(): Promise<void> {
   console.log('[SimpleX] Event loop started, waiting for messages...')
   while (client.connected) {
@@ -85,12 +97,17 @@ async function eventLoop(): Promise<void> {
 // --- Startup ---
 
 async function main(): Promise<void> {
+  // Anything below can hang without throwing (agent login is the one that did
+  // in production) — bound the whole sequence so a stuck start becomes a restart.
+  const startupDone = startupDeadline('[SimpleX]', STARTUP_TIMEOUT_MS)
+
   console.log('[SimpleX] Syncing token lists...')
   await syncTokensAtStartup()
   startPeriodicSync()
 
   console.log(`[SimpleX] Connecting to ${SIMPLEX_WS_URL}...`)
   client = await ChatClient.create(SIMPLEX_WS_URL)
+  client.sendChatCmd = watchdog.wrap(client.sendChatCmd.bind(client))
 
   const user = await client.apiGetActiveUser()
   if (!user) {
@@ -116,9 +133,10 @@ async function main(): Promise<void> {
   cleanupTimer = setInterval(cleanupSessions, CLEANUP_INTERVAL_MS)
 
   console.log('[SimpleX] Bot is running!')
-  await eventLoop()
+  startupDone()
+  await Promise.race([eventLoop(), client.client])
 
-  // The event loop only ends when the websocket to the SimpleX CLI is lost.
+  // We only get here when the websocket to the SimpleX CLI is lost.
   // The sync/cleanup intervals would keep the process alive in a zombie state,
   // so exit with an error and let pm2 restart us with a fresh connection.
   console.error('[SimpleX] Connection lost, exiting so process manager can restart')
@@ -134,6 +152,7 @@ main().catch(err => {
 function shutdown(signal: string): void {
   console.log(`\n${signal} received. Shutting down...`)
   if (cleanupTimer) clearInterval(cleanupTimer)
+  watchdog.stop()
   stopPeriodicSync()
   if (client) client.disconnect().catch(() => {})
   closeDb()

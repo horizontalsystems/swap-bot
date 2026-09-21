@@ -39,6 +39,13 @@ Every entrypoint follows the same shape: `useApiKeyFor(<platform>)` → `syncTok
 `startPeriodicSync()` → connect → on transport loss `process.exit(1)` so pm2 restarts with a fresh connection →
 SIGINT/SIGTERM shutdown closes the DB.
 
+**A hung promise is the failure mode to design against.** Process-level monitoring (pm2 status, port open, webhook
+registered) stays green while a bot whose one chat-client call never settles drops every message. So each bot wraps
+that call in a `StallWatchdog` (`utils/stall-watchdog.ts`: Telegraf `callApi`, simplex-chat `sendChatCmd`,
+signal-cli `sendMessage`) that exits the process after 120s in flight, and SimpleX/Signal bound their whole startup
+with `startupDeadline`. simplex-chat never closes `msgQ` or rejects pending commands on disconnect, which is why
+`simplex-bot.ts` races the event loop against `client.client` instead of trusting `client.connected`.
+
 `useApiKeyFor()` selects that process's swap API key (`SWAP_API_KEY_TELEGRAM` / `_SIMPLEX` / `_SIGNAL`), so the
 three bots bill and rate-limit separately. There is no shared fallback key: the call throws when its key is
 missing, and `getApiKey()` throws when no platform was selected at all — so a misconfigured bot dies at startup

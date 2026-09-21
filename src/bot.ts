@@ -7,6 +7,7 @@ import { closeDb } from './db/database'
 import { s } from './config/strings'
 import { splitLongMessage } from './utils/send-long-message'
 import { useApiKeyFor } from './utils/api'
+import { StallWatchdog } from './utils/stall-watchdog'
 
 dotenv.config()
 useApiKeyFor('telegram')
@@ -25,31 +26,8 @@ const bot = new Telegraf<SwapContext>(token)
 // (pm2 restarts us with a fresh connection) once one has been in flight too long.
 // getUpdates long-polls for 50s, so a healthy call always returns well inside the limit.
 const API_STALL_MS = 120_000
-const WATCHDOG_INTERVAL_MS = 15_000
-const inFlightSince = new Map<number, number>()
-let nextCallId = 0
-
-const originalCallApi = bot.telegram.callApi.bind(bot.telegram)
-bot.telegram.callApi = (async (...args: Parameters<typeof originalCallApi>) => {
-  const id = nextCallId++
-  inFlightSince.set(id, Date.now())
-  try {
-    return await originalCallApi(...args)
-  } finally {
-    inFlightSince.delete(id)
-  }
-}) as typeof bot.telegram.callApi
-
-const watchdog = setInterval(() => {
-  const now = Date.now()
-  for (const startedAt of inFlightSince.values()) {
-    if (now - startedAt > API_STALL_MS) {
-      console.error(`[Bot] Telegram API call stalled for ${Math.round((now - startedAt) / 1000)}s, exiting for restart`)
-      process.exit(1)
-    }
-  }
-}, WATCHDOG_INTERVAL_MS)
-watchdog.unref()
+const watchdog = new StallWatchdog('[Bot] Telegram API call', API_STALL_MS)
+bot.telegram.callApi = watchdog.wrap(bot.telegram.callApi.bind(bot.telegram)) as typeof bot.telegram.callApi
 
 // Global error handler
 bot.catch((err, ctx) => {
@@ -139,7 +117,7 @@ main().catch(err => {
 // Graceful shutdown
 function shutdown(signal: string) {
   console.log(`\n${signal} received. Shutting down...`)
-  clearInterval(watchdog)
+  watchdog.stop()
   stopPeriodicSync()
   bot.stop(signal)
   closeDb()
