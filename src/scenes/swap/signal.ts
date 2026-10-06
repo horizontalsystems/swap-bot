@@ -146,7 +146,7 @@ const PROVIDER_RISK: Record<string, string> = {
   PEGASUS: 'AML, External Liq',
   LIZEX: 'AML, External Liq',
   BITANIA: 'AML, External Liq',
-  XSWAP: 'AML, Own Liq',
+  XSWAP: 'AML',
   NEAR_CONFIDENTIAL: 'Private 🔒',
   NEAR_CONFIDENTIAL_ADVANCED: 'Private, split payout 🔒'
 }

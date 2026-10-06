@@ -58,7 +58,7 @@ const providerRisk: Record<string, string> = {
   PEGASUS: 'AML',
   LIZEX: 'AML',
   BITANIA: 'AML',
-  XSWAP: 'AML, Own liquidity',
+  XSWAP: 'AML',
   NEAR_CONFIDENTIAL: 'Private 🔒',
   NEAR_CONFIDENTIAL_ADVANCED: 'Private, split payout 🔒'
 }
