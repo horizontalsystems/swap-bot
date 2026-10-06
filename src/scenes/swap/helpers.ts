@@ -35,6 +35,7 @@ export const providerTitles: Record<string, string> = {
   PEGASUS: 'PegasusSwap',
   LIZEX: 'Lizex',
   BITANIA: 'Bitania',
+  XSWAP: 'XSwap',
   // The `advanced` rail is REQUESTED, never guaranteed — 1Click may serve it as basic —
   // so both read as "confidential" and differ only by what settlement they ask for.
   NEAR_CONFIDENTIAL: 'Near (Confidential)',
@@ -57,6 +58,7 @@ const providerRisk: Record<string, string> = {
   PEGASUS: 'AML',
   LIZEX: 'AML',
   BITANIA: 'AML',
+  XSWAP: 'AML, Own liquidity',
   NEAR_CONFIDENTIAL: 'Private 🔒',
   NEAR_CONFIDENTIAL_ADVANCED: 'Private, split payout 🔒'
 }

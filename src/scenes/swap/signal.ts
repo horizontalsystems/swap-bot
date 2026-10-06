@@ -145,7 +145,8 @@ const PROVIDER_RISK: Record<string, string> = {
   CCE: 'AML, External Liq',
   PEGASUS: 'AML, External Liq',
   LIZEX: 'AML, External Liq',
-  BITANIA: 'AML, External Liq'
+  BITANIA: 'AML, External Liq',
+  XSWAP: 'AML, Own Liq'
 }
 
 function signalProviderLabel(id: string): string {
