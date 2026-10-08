@@ -28,6 +28,9 @@ import {
   isZecIdentifier,
   pairProviders,
   providerName,
+  providerRisk,
+  hint,
+  SESSION_TIMEOUT_MS,
   shortenAddress,
   thorchainMemo,
   truncateToDecimals,
@@ -38,7 +41,6 @@ import {
 } from './helpers'
 
 const S = s('en')
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
 
 // --- State machine ---
 
@@ -117,37 +119,6 @@ async function sendImage(client: ChatClient, contactId: number, base64Image: str
   }
 }
 
-const PROVIDER_RISK: Record<string, string> = {
-  THORCHAIN: 'DEX 👌',
-  SWAPUZ: 'Private Liq 👌',
-  STEALTHEX: 'AML, External Liq',
-  LETSEXCHANGE: 'AML, External Liq',
-  QUICKEX: 'AML, External Liq',
-  NEAR: 'AML, External Liq',
-  EXOLIX: 'AML, External Liq',
-  CCE: 'AML, External Liq',
-  PEGASUS: 'AML, External Liq',
-  LIZEX: 'AML, External Liq',
-  BITANIA: 'AML, External Liq',
-  XSWAP: 'AML',
-  NEAR_CONFIDENTIAL: 'Private 🔒',
-  NEAR_CONFIDENTIAL_ADVANCED: 'Private, split payout 🔒'
-}
-
-function simplexProviderLabel(id: string): string {
-  return PROVIDER_RISK[id] ?? id
-}
-
-const HINT_LABELS: Record<string, string> = {
-  s: 's = new swap',
-  c: 'c = cancel swap',
-  b: 'b = back',
-  y: 'y = yes',
-  r: 'r = reset search',
-  f: 'f = FAQ',
-  p: 'p = secure swap on/off'
-}
-
 const COMMANDS_HELP =
   'Commands:\n\n' +
   's = start a new swap\n' +
@@ -157,10 +128,6 @@ const COMMANDS_HELP =
   'y = yes\n' +
   'p = secure swap on/off\n' +
   'f = FAQ'
-
-function hint(...keys: string[]): string {
-  return '\n\n' + keys.map(k => HINT_LABELS[k] ?? k).join('\n')
-}
 
 /** The secure-swap state, for the one screen that has no {progress} block to carry it. */
 function secureLine(session: SimplexSwapSession): string {
@@ -287,7 +254,7 @@ async function fetchAndShowRoutes(
     const num = numEmojis[i] ?? `${i + 1}.`
     return (
       `${num} ${amt(route.expectedBuyAmount, assetOut!.decimals)} ${code(assetOut!.ticker)} ${formatUsd(receiveUsdVal)}\n` +
-      `🕐 ${formatTime(route.estimatedTime.total)}, ${simplexProviderLabel(route.providers[0])}${zecTag(route)}`
+      `🕐 ${formatTime(route.estimatedTime.total)}, ${providerRisk(route.providers[0])}${zecTag(route)}`
     )
   })
 

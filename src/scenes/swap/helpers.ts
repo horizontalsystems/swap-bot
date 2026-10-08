@@ -46,7 +46,9 @@ export function providerName(id: string): string {
   return providerTitles[id] ?? id
 }
 
-const providerRisk: Record<string, string> = {
+// The one risk table for every platform: Telegram appends it to the provider name on the
+// route buttons, SimpleX and Signal show it alone in the route list.
+const PROVIDER_RISK: Record<string, string> = {
   THORCHAIN: 'DEX 👌',
   SWAPUZ: 'Private liquidity 👌',
   STEALTHEX: 'AML',
@@ -57,16 +59,41 @@ const providerRisk: Record<string, string> = {
   CCE: 'AML',
   PEGASUS: 'AML',
   LIZEX: 'AML',
-  BITANIA: 'AML',
+  BITANIA: 'Private liquidity 👌',
   XSWAP: 'AML',
   NEAR_CONFIDENTIAL: 'Private 🔒',
   NEAR_CONFIDENTIAL_ADVANCED: 'Private, split payout 🔒'
 }
 
+/** The provider's risk tag, falling back to its raw id. */
+export function providerRisk(id: string): string {
+  return PROVIDER_RISK[id] ?? id
+}
+
 export function providerLabel(id: string): string {
   const name = providerTitles[id] ?? id
-  const risk = providerRisk[id]
+  const risk = PROVIDER_RISK[id]
   return risk ? `${name} · ${risk}` : name
+}
+
+// --- SimpleX / Signal chat UI ---
+
+/** How long an idle SimpleX/Signal session lives before `cleanupSessions` sweeps it. */
+export const SESSION_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
+
+const HINT_LABELS: Record<string, string> = {
+  s: 's = new swap',
+  c: 'c = cancel swap',
+  b: 'b = back',
+  y: 'y = yes',
+  r: 'r = reset search',
+  f: 'f = FAQ',
+  p: 'p = secure swap on/off'
+}
+
+/** The command reminder appended under a SimpleX/Signal message. */
+export function hint(...keys: string[]): string {
+  return '\n\n' + keys.map(k => HINT_LABELS[k] ?? k).join('\n')
 }
 
 // --- Secure (confidential) swaps ---
